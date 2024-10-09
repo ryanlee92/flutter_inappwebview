@@ -49,7 +49,12 @@ public class InAppWebView: WKWebView, WKUIDelegate,
     var currentOpenPanel: NSOpenPanel?
     
     fileprivate var interceptOnlyAsyncAjaxRequestsPluginScript: PluginScript?
-    
+                              
+    public override func scrollWheel(with theEvent: NSEvent) {
+        nextResponder?.scrollWheel(with: theEvent)
+        return
+    }
+
     init(id: Any?, plugin: InAppWebViewFlutterPlugin?, frame: CGRect, configuration: WKWebViewConfiguration,
          userScripts: [UserScript] = []) {
         super.init(frame: frame, configuration: configuration)
