@@ -54,6 +54,11 @@ public class InAppWebView: WKWebView, WKUIDelegate,
     private var javaScriptBridgeEnabled = true
     
     public override var acceptsFirstResponder: Bool { return true }
+
+    public override func scrollWheel(with theEvent: NSEvent) {
+        nextResponder?.scrollWheel(with: theEvent)
+        return
+    }
     
     init(id: Any?, plugin: InAppWebViewFlutterPlugin?, frame: CGRect, configuration: WKWebViewConfiguration,
          userScripts: [UserScript] = []) {
