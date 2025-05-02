@@ -39,6 +39,8 @@ public class InAppWebView: WKWebView, WKUIDelegate,
     // Used to manage pauseTimers() and resumeTimers()
     var isPausedTimers = false
     var isPausedTimersCompletionHandler: (() -> Void)?
+    
+    var disableScrollWheel = false
 
     var initialUserScripts: [UserScript] = []
     
@@ -56,8 +58,11 @@ public class InAppWebView: WKWebView, WKUIDelegate,
     public override var acceptsFirstResponder: Bool { return true }
 
     public override func scrollWheel(with theEvent: NSEvent) {
-        nextResponder?.scrollWheel(with: theEvent)
-        return
+        if (disableScrollWheel) {
+            nextResponder?.scrollWheel(with: theEvent)
+            return
+        }
+        super.scrollWheel(with: theEvent)
     }
     
     init(id: Any?, plugin: InAppWebViewFlutterPlugin?, frame: CGRect, configuration: WKWebViewConfiguration,
@@ -166,6 +171,9 @@ public class InAppWebView: WKWebView, WKUIDelegate,
             if settings.clearCache {
                 clearCache()
             }
+            
+            
+            disableScrollWheel = settings.disableVerticalScroll;
         }
         
         prepareAndAddUserScripts()
