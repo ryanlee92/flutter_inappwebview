@@ -62,6 +62,7 @@ public class InAppWebViewSettings: ISettings<InAppWebView> {
     var pluginScriptsOriginAllowList: [String]? = nil
     var pluginScriptsForMainFrameOnly = false
     var alpha: Double? = nil
+    var disableVerticalScroll = true
     
     override init(){
         super.init()
