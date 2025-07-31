@@ -2831,6 +2831,16 @@ if(window.\(JavaScriptBridgeJS.get_JAVASCRIPT_BRIDGE_NAME())[\(_callHandlerID)] 
             }
         }
     }
+
+    @available(macOS 12.0, *)
+    public func saveState() -> Data? {
+        return interactionState is NSData || interactionState is Data ? interactionState as? Data : nil
+    }
+    
+    @available(macOS 12.0, *)
+    public func restoreState(state: Data) {
+        interactionState = state
+    }
     
     public func runWindowBeforeCreatedCallbacks() {
         let callbacks = windowBeforeCreatedCallbacks
