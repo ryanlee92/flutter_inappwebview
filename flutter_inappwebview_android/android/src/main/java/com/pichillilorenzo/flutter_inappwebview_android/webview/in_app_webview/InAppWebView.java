@@ -22,8 +22,10 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Parcel;
+import android.print.InAppWebViewPrintDocumentAdapter;
 import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
+import android.print.PrintJob;
 import android.print.PrintManager;
 import android.text.TextUtils;
 import android.util.AttributeSet;
@@ -115,7 +117,7 @@ import java.util.UUID;
 import io.flutter.plugin.common.MethodChannel;
 
 final public class InAppWebView extends InputAwareWebView implements InAppWebViewInterface {
-  protected static final String LOG_TAG = "InAppWebView";
+  private static final String LOG_TAG = "InAppWebView";
   public static final String METHOD_CHANNEL_NAME_PREFIX = "com.pichillilorenzo/flutter_inappwebview_";
 
   @Nullable
@@ -612,8 +614,11 @@ final public class InAppWebView extends InputAwareWebView implements InAppWebVie
       interceptOnlyAsyncAjaxRequestsPluginScript = InterceptAjaxRequestJS.createInterceptOnlyAsyncAjaxRequestsPluginScript(customSettings.interceptOnlyAsyncAjaxRequests);
       if (customSettings.useShouldInterceptAjaxRequest) {
         userContentController.addPluginScript(interceptOnlyAsyncAjaxRequestsPluginScript);
-        userContentController.addPluginScript(InterceptAjaxRequestJS.INTERCEPT_AJAX_REQUEST_JS_PLUGIN_SCRIPT(customSettings.pluginScriptsOriginAllowList,
-                customSettings.pluginScriptsForMainFrameOnly));
+        userContentController.addPluginScript(InterceptAjaxRequestJS.INTERCEPT_AJAX_REQUEST_JS_PLUGIN_SCRIPT(
+                customSettings.pluginScriptsOriginAllowList,
+                customSettings.pluginScriptsForMainFrameOnly,
+                customSettings.useOnAjaxReadyStateChange,
+                customSettings.useOnAjaxProgress));
       }
       if (customSettings.useShouldInterceptFetchRequest) {
         userContentController.addPluginScript(InterceptFetchRequestJS.INTERCEPT_FETCH_REQUEST_JS_PLUGIN_SCRIPT(customSettings.pluginScriptsOriginAllowList,
@@ -833,9 +838,20 @@ final public class InAppWebView extends InputAwareWebView implements InAppWebVie
       enablePluginScriptAtRuntime(
               InterceptAjaxRequestJS.FLAG_VARIABLE_FOR_SHOULD_INTERCEPT_AJAX_REQUEST_JS_SOURCE(),
               newCustomSettings.useShouldInterceptAjaxRequest,
-              InterceptAjaxRequestJS.INTERCEPT_AJAX_REQUEST_JS_PLUGIN_SCRIPT(customSettings.pluginScriptsOriginAllowList,
-                      customSettings.pluginScriptsForMainFrameOnly)
+              InterceptAjaxRequestJS.INTERCEPT_AJAX_REQUEST_JS_PLUGIN_SCRIPT(
+                      customSettings.pluginScriptsOriginAllowList,
+                      customSettings.pluginScriptsForMainFrameOnly,
+                      newCustomSettings.useOnAjaxReadyStateChange,
+                      newCustomSettings.useOnAjaxProgress)
       );
+    }
+
+    if (newSettingsMap.get("useOnAjaxReadyStateChange") != null && customSettings.useOnAjaxReadyStateChange != newCustomSettings.useOnAjaxReadyStateChange) {
+      evaluateJavascript("((window.top == null || window.top === window) ? window : window.top)." + InterceptAjaxRequestJS.FLAG_VARIABLE_FOR_ON_AJAX_READY_STATE_CHANGE() + " = " + newCustomSettings.useOnAjaxReadyStateChange + ";", null);
+    }
+
+    if (newSettingsMap.get("useOnAjaxProgress") != null && customSettings.useOnAjaxProgress != newCustomSettings.useOnAjaxProgress) {
+      evaluateJavascript("((window.top == null || window.top === window) ? window : window.top)." + InterceptAjaxRequestJS.FLAG_VARIABLE_FOR_ON_AJAX_PROGRESS() + " = " + newCustomSettings.useOnAjaxProgress + ";", null);
     }
 
     if (newSettingsMap.get("interceptOnlyAsyncAjaxRequests") != null && customSettings.interceptOnlyAsyncAjaxRequests != newCustomSettings.interceptOnlyAsyncAjaxRequests) {
@@ -1189,12 +1205,12 @@ final public class InAppWebView extends InputAwareWebView implements InAppWebVie
   public void enablePluginScriptAtRuntime(final String flagVariable,
                                           final boolean enable,
                                           final PluginScript pluginScript) {
-    evaluateJavascript("window." + flagVariable, null, new ValueCallback<String>() {
+    evaluateJavascript("((window.top == null || window.top === window) ? window : window.top)." + flagVariable, null, new ValueCallback<String>() {
       @Override
       public void onReceiveValue(String value) {
         boolean alreadyLoaded = value != null && !value.equalsIgnoreCase("null");
         if (alreadyLoaded) {
-          String enableSource = "window." + flagVariable + " = " + enable + ";";
+          String enableSource = "((window.top == null || window.top === window) ? window : window.top)." + flagVariable + " = " + enable + ";";
           evaluateJavascript(enableSource, null, null);
           if (!enable) {
             userContentController.removePluginScript(pluginScript);
@@ -1445,7 +1461,6 @@ final public class InAppWebView extends InputAwareWebView implements InAppWebVie
     webSettings.setBuiltInZoomControls(enabled);
   }
 
-  @RequiresApi(api = Build.VERSION_CODES.KITKAT)
   @Nullable
   public String printCurrentPage(@Nullable PrintJobSettings settings) {
     if (plugin != null && plugin.activity != null) {
@@ -1500,15 +1515,27 @@ final public class InAppWebView extends InputAwareWebView implements InAppWebVie
           printAdapter = createPrintDocumentAdapter();
         }
 
-        // Create a printCurrentPage job with name and adapter instance
-        android.print.PrintJob job = printManager.print(jobName, printAdapter, builder.build());
+        PrintJobController printJobController = null;
+        String id = null;
 
         if (settings != null && settings.handledByClient && plugin.printJobManager != null) {
-          String id = UUID.randomUUID().toString();
-          PrintJobController printJobController = new PrintJobController(id, job, settings, plugin);
+          id = UUID.randomUUID().toString();
+          printJobController = new PrintJobController(id, settings, plugin);
           plugin.printJobManager.jobs.put(printJobController.id, printJobController);
-          return id;
+          final PrintJobController finalPrintJobController = printJobController;
+          printAdapter = new InAppWebViewPrintDocumentAdapter(printAdapter, new InAppWebViewPrintDocumentAdapter.PrintDocumentAdapterCallback() {
+            @Override
+            public void onFinish() {
+              finalPrintJobController.onComplete(true, null);
+            }
+          });
         }
+
+        // Create a printCurrentPage job with name and adapter instance
+        PrintJob job = printManager.print(jobName, printAdapter, builder.build());
+        if (printJobController != null) printJobController.setJob(job);
+
+        return id;
       } else {
         Log.e(LOG_TAG, "No PrintManager available");
       }

@@ -24,6 +24,7 @@ public class PrintJobController: NSObject, Disposable {
     var channelDelegate: PrintJobChannelDelegate?
     var state = PrintJobState.created
     var creationTime = Int64(Date().timeIntervalSince1970 * 1000)
+    var disposeWhenDidRun = false
     private var completionHandler: PrintJobController.CompletionHandler?
     
     public typealias CompletionHandler = (_ printOperation: NSPrintOperation,
@@ -55,11 +56,16 @@ public class PrintJobController: NSObject, Disposable {
     @objc func printOperationDidRun(printOperation: NSPrintOperation,
                                     success: Bool,
                                     contextInfo: UnsafeMutableRawPointer?) {
-        state = success ? .completed : .canceled
-        channelDelegate?.onComplete(completed: success, error: nil)
-        if let completionHandler = completionHandler {
-            completionHandler(printOperation, success, contextInfo)
-            self.completionHandler = nil
+        DispatchQueue.main.async { [weak self] in
+            self?.state = success ? .completed : .canceled
+            self?.channelDelegate?.onComplete(completed: success, error: nil)
+            if let completionHandler = self?.completionHandler {
+                completionHandler(printOperation, success, contextInfo)
+                self?.completionHandler = nil
+            }
+            if let disposeWhenDidRun = self?.disposeWhenDidRun, disposeWhenDidRun {
+                self?.dispose()
+            }
         }
     }
     
@@ -71,7 +77,7 @@ public class PrintJobController: NSObject, Disposable {
         return PrintJobInfo.init(fromPrintJobController: self)
     }
     
-    public func disposeNoDismiss() {
+    public func dispose() {
         channelDelegate?.dispose()
         channelDelegate = nil
         completionHandler = nil
@@ -80,12 +86,7 @@ public class PrintJobController: NSObject, Disposable {
         plugin = nil
     }
     
-    public func dispose() {
-        channelDelegate?.dispose()
-        channelDelegate = nil
-        completionHandler = nil
-        job = nil
-        plugin?.printJobManager?.jobs[id] = nil
-        plugin = nil
+    deinit {
+        debugPrint("PrintJobController - dealloc")
     }
 }

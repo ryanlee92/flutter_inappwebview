@@ -1,29 +1,25 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:typed_data';
-import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_inappwebview_platform_interface/src/types/disposable.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import '../context_menu/context_menu.dart';
+import '../debug_logging_settings.dart';
 import '../find_interaction/platform_find_interaction_controller.dart';
-import '../inappwebview_platform.dart';
-import '../pull_to_refresh/main.dart';
-import '../types/main.dart';
-
-import '../in_app_webview/platform_inappwebview_controller.dart';
 import '../in_app_webview/in_app_webview_settings.dart';
-
+import '../in_app_webview/platform_inappwebview_controller.dart';
+import '../inappwebview_platform.dart';
+import '../platform_webview_feature.dart';
 import '../print_job/main.dart';
+import '../pull_to_refresh/main.dart';
+import '../pull_to_refresh/platform_pull_to_refresh_controller.dart';
+import '../types/main.dart';
 import '../web_uri.dart';
 import '../webview_environment/platform_webview_environment.dart';
 import 'in_app_browser_menu_item.dart';
 import 'in_app_browser_settings.dart';
-import '../debug_logging_settings.dart';
-import '../pull_to_refresh/platform_pull_to_refresh_controller.dart';
 
 /// Object specifying creation parameters for creating a [PlatformInAppBrowser].
 ///
@@ -873,11 +869,17 @@ abstract class PlatformInAppBrowserEvents {
 
   ///Event fired when an `XMLHttpRequest` is sent to a server.
   ///It gives the host application a chance to take control over the request before sending it.
+  ///This event is implemented using JavaScript under the hood.
+  ///
+  ///Due to the async nature of this event implementation, it will intercept only async `XMLHttpRequest`s ([AjaxRequest.isAsync] with `true`).
+  ///To be able to intercept sync `XMLHttpRequest`s, use [InAppWebViewSettings.interceptOnlyAsyncAjaxRequests] to `false`.
+  ///If necessary, you should implement your own logic using for example an [UserScript] overriding the
+  ///[XMLHttpRequest](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest) JavaScript object.
   ///
   ///[ajaxRequest] represents the `XMLHttpRequest`.
   ///
   ///**NOTE**: In order to be able to listen this event, you need to set [InAppWebViewSettings.useShouldInterceptAjaxRequest] setting to `true`.
-  ///Also, unlike iOS that has [WKUserScript](https://developer.apple.com/documentation/webkit/wkuserscript) that
+  ///Also, on Android that doesn't support the [WebViewFeature.DOCUMENT_START_SCRIPT], unlike iOS that has [WKUserScript](https://developer.apple.com/documentation/webkit/wkuserscript) that
   ///can inject javascript code right after the document element is created but before any other content is loaded, in Android the javascript code
   ///used to intercept ajax requests is loaded as soon as possible so it won't be instantaneous as iOS but just after some milliseconds (< ~100ms).
   ///Inside the `window.addEventListener("flutterInAppWebViewPlatformReady")` event, the ajax requests will be intercept for sure.
@@ -892,12 +894,18 @@ abstract class PlatformInAppBrowserEvents {
 
   ///Event fired whenever the `readyState` attribute of an `XMLHttpRequest` changes.
   ///It gives the host application a chance to abort the request.
+  ///This event is implemented using JavaScript under the hood.
+  ///
+  ///Due to the async nature of this event implementation,
+  ///using it could cause some issues, so, be careful when using it.
+  ///In this case, you should implement your own logic using for example an [UserScript] overriding the
+  ///[XMLHttpRequest](https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest) JavaScript object.
   ///
   ///[ajaxRequest] represents the [XMLHttpRequest].
   ///
-  ///**NOTE**: In order to be able to listen this event, you need to set [InAppWebViewSettings.useShouldInterceptAjaxRequest] setting to `true`.
-  ///Also, unlike iOS that has [WKUserScript](https://developer.apple.com/documentation/webkit/wkuserscript) that
-  ///can inject javascript code right after the document element is created but before any other content is loaded, in Android the javascript code
+  ///**NOTE**: In order to be able to listen this event, you need to set [InAppWebViewSettings.useShouldInterceptAjaxRequest] and [InAppWebViewSettings.useOnAjaxReadyStateChange] settings to `true`.
+  ///Also, on Android that doesn't support the [WebViewFeature.DOCUMENT_START_SCRIPT], unlike iOS that has [WKUserScript](https://developer.apple.com/documentation/webkit/wkuserscript) that
+  ///can inject javascript code right after the document element is created but before any other content is loaded, the javascript code
   ///used to intercept ajax requests is loaded as soon as possible so it won't be instantaneous as iOS but just after some milliseconds (< ~100ms).
   ///Inside the `window.addEventListener("flutterInAppWebViewPlatformReady")` event, the ajax requests will be intercept for sure.
   ///
@@ -912,11 +920,12 @@ abstract class PlatformInAppBrowserEvents {
 
   ///Event fired as an `XMLHttpRequest` progress.
   ///It gives the host application a chance to abort the request.
+  ///This event is implemented using JavaScript under the hood.
   ///
   ///[ajaxRequest] represents the [XMLHttpRequest].
   ///
-  ///**NOTE**: In order to be able to listen this event, you need to set [InAppWebViewSettings.useShouldInterceptAjaxRequest] setting to `true`.
-  ///Also, unlike iOS that has [WKUserScript](https://developer.apple.com/documentation/webkit/wkuserscript) that
+  ///**NOTE**: In order to be able to listen this event, you need to set [InAppWebViewSettings.useShouldInterceptAjaxRequest] and [InAppWebViewSettings.useOnAjaxProgress] settings to `true`.
+  ///Also, on Android that doesn't support the [WebViewFeature.DOCUMENT_START_SCRIPT], unlike iOS that has [WKUserScript](https://developer.apple.com/documentation/webkit/wkuserscript) that
   ///can inject javascript code right after the document element is created but before any other content is loaded, in Android the javascript code
   ///used to intercept ajax requests is loaded as soon as possible so it won't be instantaneous as iOS but just after some milliseconds (< ~100ms).
   ///Inside the `window.addEventListener("flutterInAppWebViewPlatformReady")` event, the ajax requests will be intercept for sure.
@@ -931,11 +940,12 @@ abstract class PlatformInAppBrowserEvents {
 
   ///Event fired when a request is sent to a server through [Fetch API](https://developer.mozilla.org/it/docs/Web/API/Fetch_API).
   ///It gives the host application a chance to take control over the request before sending it.
+  ///This event is implemented using JavaScript under the hood.
   ///
   ///[fetchRequest] represents a resource request.
   ///
   ///**NOTE**: In order to be able to listen this event, you need to set [InAppWebViewSettings.useShouldInterceptFetchRequest] setting to `true`.
-  ///Also, unlike iOS that has [WKUserScript](https://developer.apple.com/documentation/webkit/wkuserscript) that
+  ///Also, on Android that doesn't support the [WebViewFeature.DOCUMENT_START_SCRIPT], unlike iOS that has [WKUserScript](https://developer.apple.com/documentation/webkit/wkuserscript) that
   ///can inject javascript code right after the document element is created but before any other content is loaded, in Android the javascript code
   ///used to intercept fetch requests is loaded as soon as possible so it won't be instantaneous as iOS but just after some milliseconds (< ~100ms).
   ///Inside the `window.addEventListener("flutterInAppWebViewPlatformReady")` event, the fetch requests will be intercept for sure.
@@ -1480,4 +1490,22 @@ abstract class PlatformInAppBrowserEvents {
   ///**Officially Supported Platforms/Implementations**:
   ///- Windows ([Official API - ICoreWebView2Controller.add_AcceleratorKeyPressed](https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2controller?view=webview2-1.0.2849.39#add_acceleratorkeypressed))
   void onAcceleratorKeyPressed(AcceleratorKeyPressedDetail detail) {}
+
+  ///Tell the client to show a file chooser.
+  ///This is called to handle HTML forms with 'file' input type,
+  ///in response to the user pressing the "Select File" button.
+  ///To cancel the request, return a [ShowFileChooserResponse] with [ShowFileChooserResponse.filePaths] to `null`.
+  ///
+  ///Note that the WebView does not enforce any restrictions on the chosen file(s).
+  ///WebView can access all files that your app can access.
+  ///In case the file(s) are chosen through an untrusted source such as a third-party app,
+  ///it is your own app's responsibility to check what the returned Uris refer
+  ///to.
+  ///
+  ///**Officially Supported Platforms/Implementations**:
+  ///- Android native WebView ([Official API - WebChromeClient.onShowFileChooser](https://developer.android.com/reference/android/webkit/WebChromeClient#onShowFileChooser(android.webkit.WebView,%20android.webkit.ValueCallback%3Candroid.net.Uri[]%3E,%20android.webkit.WebChromeClient.FileChooserParams)))
+  FutureOr<ShowFileChooserResponse?> onShowFileChooser(
+      ShowFileChooserRequest request) {
+    return null;
+  }
 }

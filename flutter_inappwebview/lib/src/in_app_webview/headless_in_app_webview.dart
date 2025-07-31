@@ -86,7 +86,7 @@ class HeadlessInAppWebView {
       @Deprecated('Use onNavigationResponse instead')
       FutureOr<IOSNavigationResponseAction?> Function(InAppWebViewController controller, IOSWKNavigationResponse navigationResponse)? iosOnNavigationResponse,
       @Deprecated('Use shouldAllowDeprecatedTLS instead') FutureOr<IOSShouldAllowDeprecatedTLSAction?> Function(InAppWebViewController controller, URLAuthenticationChallenge challenge)? iosShouldAllowDeprecatedTLS,
-      FutureOr<AjaxRequestAction> Function(InAppWebViewController controller, AjaxRequest ajaxRequest)? onAjaxProgress,
+      FutureOr<AjaxRequestAction?> Function(InAppWebViewController controller, AjaxRequest ajaxRequest)? onAjaxProgress,
       FutureOr<AjaxRequestAction?> Function(InAppWebViewController controller, AjaxRequest ajaxRequest)? onAjaxReadyStateChange,
       void Function(InAppWebViewController controller, ConsoleMessage consoleMessage)? onConsoleMessage,
       FutureOr<bool?> Function(InAppWebViewController controller, CreateWindowAction createWindowAction)? onCreateWindow,
@@ -167,7 +167,8 @@ class HeadlessInAppWebView {
       )? onMicrophoneCaptureStateChanged,
       void Function(InAppWebViewController controller, Size oldContentSize, Size newContentSize)? onContentSizeChanged,
       void Function(InAppWebViewController controller, ProcessFailedDetail detail)? onProcessFailed,
-      void Function(InAppWebViewController controller, AcceleratorKeyPressedDetail detail)? onAcceleratorKeyPressed})
+      void Function(InAppWebViewController controller, AcceleratorKeyPressedDetail detail)? onAcceleratorKeyPressed,
+      FutureOr<ShowFileChooserResponse?> Function(InAppWebViewController controller, ShowFileChooserRequest request)? onShowFileChooser})
       : this.fromPlatformCreationParams(
             params: PlatformHeadlessInAppWebViewCreationParams(
           controllerFromPlatform: (PlatformInAppWebViewController controller) =>
@@ -520,6 +521,10 @@ class HeadlessInAppWebView {
           onAcceleratorKeyPressed: onAcceleratorKeyPressed != null
               ? (controller, detail) =>
                   onAcceleratorKeyPressed.call(controller, detail)
+              : null,
+          onShowFileChooser: onShowFileChooser != null
+              ? (controller, request) =>
+                  onShowFileChooser.call(controller, request)
               : null,
         ));
 

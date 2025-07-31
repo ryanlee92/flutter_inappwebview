@@ -7,16 +7,25 @@
   - `flutter_inappwebview_macos`: `^1.2.0-beta.2` -> `^1.2.0-beta.3`
   - `flutter_inappwebview_web`: `^1.2.0-beta.2` -> `^1.2.0-beta.3`
   - `flutter_inappwebview_windows`: `^0.7.0-beta.2` -> `^0.7.0-beta.3`
+- Fixed "When useShouldInterceptAjaxRequest is true, some ajax requests doesn't work" [#2197](https://github.com/pichillilorenzo/flutter_inappwebview/issues/2197)
 
 #### Platform Interface
 - Added `saveState`, `restoreState` methods to `PlatformInAppWebViewController` class
+- Added `useOnAjaxReadyStateChange`, `useOnAjaxProgress`, `useOnShowFileChooser` properties to `InAppWebViewSettings`
+- Added `onShowFileChooser` WebView events
 
 #### Android Platform
 - Implemented `saveState`, `restoreState` InAppWebViewController methods
+- Implemented `onShowFileChooser` WebView event
+- Merged "Android: implemented PlatformPrintJobController.onComplete" [#2216](https://github.com/pichillilorenzo/flutter_inappwebview/pull/2216) (thanks to [Doflatango](https://github.com/Doflatango))
 
 #### macOS and iOS Platforms
 - Implemented `saveState`, `restoreState` InAppWebViewController methods
+- Implemented `PlatformProxyController` class
 - Merged "Add proxy support for iOS" [#2362](https://github.com/pichillilorenzo/flutter_inappwebview/pull/2362) (thanks to [yerkejs](https://github.com/yerkejs))
+- Fixed "[iOS] Webview opened with windowId does not receive javascript handler callback." [#2393](https://github.com/pichillilorenzo/flutter_inappwebview/issues/2393)
+- Fixed internal javascript callback handlers when the WebView has windowId not null
+- macos: Fixed crash of unhandled `onPrintRequest` WebView event
 
 ### Windows
 - Merged "windows: fix WebViewEnvironment dispose crash" [#2433](https://github.com/pichillilorenzo/flutter_inappwebview/pull/2433) (thanks to [GooRingX](https://github.com/GooRingX))
