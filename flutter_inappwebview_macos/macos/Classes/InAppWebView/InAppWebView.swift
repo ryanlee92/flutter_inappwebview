@@ -40,8 +40,6 @@ public class InAppWebView: WKWebView, WKUIDelegate,
     var isPausedTimers = false
     var isPausedTimersCompletionHandler: (() -> Void)?
     
-    var disableScrollWheel = false
-
     var initialUserScripts: [UserScript] = []
     
     var customIMPs: [IMP] = []
@@ -56,13 +54,52 @@ public class InAppWebView: WKWebView, WKUIDelegate,
     private var javaScriptBridgeEnabled = true
     
     public override var acceptsFirstResponder: Bool { return true }
-
-    public override func scrollWheel(with theEvent: NSEvent) {
-        if (disableScrollWheel) {
-            nextResponder?.scrollWheel(with: theEvent)
+    public var disableVerticalScrollWheel = false
+    public var disableHorizontalScrollWheel = false
+    
+    public override func scrollWheel(with event: NSEvent) {
+        let deltaX = event.scrollingDeltaX
+        let deltaY = event.scrollingDeltaY
+    
+        let blockHorizontal = disableHorizontalScrollWheel && abs(deltaX) > 0
+        let blockVertical = disableVerticalScrollWheel && abs(deltaY) > 0
+    
+        // 수직, 수평 모두 막혔으면 responder chain으로 넘김
+        if blockHorizontal && blockVertical {
+            nextResponder?.scrollWheel(with: event)
             return
         }
-        super.scrollWheel(with: theEvent)
+    
+        // 수직만 막혔으면 deltaY를 제거한 이벤트를 만들어 전달
+        if blockVertical && !blockHorizontal {
+            let modifiedEvent = NSEvent.scrollWheel(
+                location: event.locationInWindow,
+                modifierFlags: event.modifierFlags,
+                timestamp: event.timestamp,
+                deltaX: deltaX,
+                deltaY: 0,
+                deltaZ: event.scrollingDeltaZ
+            )
+            super.scrollWheel(with: modifiedEvent ?? event)
+            return
+        }
+    
+        // 수평만 막혔으면 deltaX를 제거한 이벤트 전달
+        if blockHorizontal && !blockVertical {
+            let modifiedEvent = NSEvent.scrollWheel(
+                location: event.locationInWindow,
+                modifierFlags: event.modifierFlags,
+                timestamp: event.timestamp,
+                deltaX: 0,
+                deltaY: deltaY,
+                deltaZ: event.scrollingDeltaZ
+            )
+            super.scrollWheel(with: modifiedEvent ?? event)
+            return
+        }
+    
+        // 제한 없으면 원래 이벤트 그대로 처리
+        super.scrollWheel(with: event)
     }
     
     init(id: Any?, plugin: InAppWebViewFlutterPlugin?, frame: CGRect, configuration: WKWebViewConfiguration,
@@ -173,7 +210,8 @@ public class InAppWebView: WKWebView, WKUIDelegate,
             }
             
             
-            disableScrollWheel = settings.disableVerticalScroll;
+            disableVerticalScrollWheel = settings.disableVerticalScroll;
+            disableHorizontalScrollWheel = settings.disableHorizontalScroll;
         }
         
         prepareAndAddUserScripts()
