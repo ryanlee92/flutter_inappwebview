@@ -61,40 +61,12 @@ public class InAppWebView: WKWebView, WKUIDelegate,
         let deltaX = event.scrollingDeltaX
         let deltaY = event.scrollingDeltaY
     
-        let blockHorizontal = disableHorizontalScrollWheel && abs(deltaX) > 0
-        let blockVertical = disableVerticalScrollWheel && abs(deltaY) > 0
-    
+        let blockHorizontal = disableHorizontalScrollWheel && abs(deltaX) >= abs(deltaY)
+        let blockVertical = disableVerticalScrollWheel && abs(deltaX) <= abs(deltaY)
+        
         // 수직, 수평 모두 막혔으면 responder chain으로 넘김
-        if blockHorizontal && blockVertical {
+        if blockHorizontal || blockVertical {
             nextResponder?.scrollWheel(with: event)
-            return
-        }
-    
-        // 수직만 막혔으면 deltaY를 제거한 이벤트를 만들어 전달
-        if blockVertical && !blockHorizontal {
-            let modifiedEvent = NSEvent.scrollWheel(
-                location: event.locationInWindow,
-                modifierFlags: event.modifierFlags,
-                timestamp: event.timestamp,
-                deltaX: deltaX,
-                deltaY: 0,
-                deltaZ: event.scrollingDeltaZ
-            )
-            super.scrollWheel(with: modifiedEvent ?? event)
-            return
-        }
-    
-        // 수평만 막혔으면 deltaX를 제거한 이벤트 전달
-        if blockHorizontal && !blockVertical {
-            let modifiedEvent = NSEvent.scrollWheel(
-                location: event.locationInWindow,
-                modifierFlags: event.modifierFlags,
-                timestamp: event.timestamp,
-                deltaX: 0,
-                deltaY: deltaY,
-                deltaZ: event.scrollingDeltaZ
-            )
-            super.scrollWheel(with: modifiedEvent ?? event)
             return
         }
     
