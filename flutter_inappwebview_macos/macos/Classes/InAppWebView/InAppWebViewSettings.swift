@@ -63,6 +63,7 @@ public class InAppWebViewSettings: ISettings<InAppWebView> {
     var pluginScriptsForMainFrameOnly = false
     var alpha: Double? = nil
     var disableVerticalScroll = true
+    var disableHorizontalScroll = true
     
     override init(){
         super.init()
