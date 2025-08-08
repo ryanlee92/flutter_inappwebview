@@ -315,6 +315,7 @@ class _CustomPlatformViewState extends State<CustomPlatformView>
     });
 
     _cursorSubscription = _controller._cursor.listen((cursor) {
+      if (!mounted) return;
       setState(() {
         _cursor = cursor;
       });
@@ -455,6 +456,7 @@ class _CustomPlatformViewState extends State<CustomPlatformView>
   }
 
   void _reportSurfaceSize() async {
+    if (!mounted) return;
     final box = _key.currentContext?.findRenderObject() as RenderBox?;
     if (box != null) {
       await _controller.ready;
@@ -464,6 +466,7 @@ class _CustomPlatformViewState extends State<CustomPlatformView>
   }
 
   void _reportWidgetPosition() async {
+    if (!mounted) return;
     final box = _key.currentContext?.findRenderObject() as RenderBox?;
     if (box != null) {
       await _controller.ready;
