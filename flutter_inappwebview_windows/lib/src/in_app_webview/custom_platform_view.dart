@@ -129,6 +129,7 @@ class CustomPlatformViewController
   /// Initializes the underlying platform view.
   Future<void> initialize(
       {Function(int id)? onPlatformViewCreated, dynamic arguments}) async {
+    if (!mounted) return;
     if (_isDisposed) {
       return;
     }
