@@ -295,6 +295,7 @@ class _CustomPlatformViewState extends State<CustomPlatformView>
 
     _controller.initialize(
         onPlatformViewCreated: (id) {
+          if (!mounted) return;
           widget.onPlatformViewCreated?.call(id);
           setState(() {});
         },
