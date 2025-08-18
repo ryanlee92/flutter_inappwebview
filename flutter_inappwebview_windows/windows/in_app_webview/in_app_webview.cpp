@@ -2334,17 +2334,18 @@ namespace flutter_inappwebview_plugin
 
     if (surface_ && width > 0 && height > 0) {
       scaleFactor_ = scale_factor;
-      auto scaled_width = width * scale_factor;
-      auto scaled_height = height * scale_factor;
 
       auto px = [&](double logical) { return (int)std::round(logical * scale_factor); };
+      auto scaled_width = px(width);
+      auto scaled_height = px(height);
+
       RECT bounds;
       bounds.left = 0;
       bounds.top = 0;
       bounds.right = static_cast<LONG>(scaled_width);
       bounds.bottom = static_cast<LONG>(scaled_height);
 
-      surface_->put_Size({ px(scaled_width), px(scaled_height) });
+      surface_->put_Size({ static_cast<float>(scaled_width), static_cast<float>(scaled_height) });
 
       // double scale = GetDpiForWindow(hwnd) / 96.0;
 // RECT r{ px(x), px(y), px(x+w), px(y+h) };
