@@ -2337,7 +2337,7 @@ namespace flutter_inappwebview_plugin
       auto scaled_width = width * scale_factor;
       auto scaled_height = height * scale_factor;
 
-      auto px = [&](double logical) { return (int)std::round(logical * scale); };
+      auto px = [&](double logical) { return (int)std::round(logical * scale_factor); };
       RECT bounds;
       bounds.left = 0;
       bounds.top = 0;
