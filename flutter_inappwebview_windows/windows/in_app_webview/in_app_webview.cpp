@@ -2356,7 +2356,7 @@ namespace flutter_inappwebview_plugin
       wil::com_ptr<ICoreWebView2Controller3> webViewController3;
       if (SUCCEEDED(webViewController->QueryInterface(IID_PPV_ARGS(&webViewController3)))) {
         webViewController3->put_RasterizationScale(scale_factor);
-        webviewController->put_BoundsMode(COREWEBVIEW2_BOUNDS_MODE_USE_RASTERIZATION_SCALE);
+        webviewController3->put_BoundsMode(COREWEBVIEW2_BOUNDS_MODE_USE_RASTERIZATION_SCALE);
       }
 
       if (webViewController->put_Bounds(bounds) != S_OK) {
