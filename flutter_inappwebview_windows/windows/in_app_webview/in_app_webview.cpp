@@ -2346,8 +2346,7 @@ namespace flutter_inappwebview_plugin
 
       surface_->put_Size({ px(scaled_width), px(scaled_height) });
 
-      double scale = GetDpiForWindow(hwnd) / 96.0;
-
+      // double scale = GetDpiForWindow(hwnd) / 96.0;
 // RECT r{ px(x), px(y), px(x+w), px(y+h) };
 // webviewController->put_Bounds(r);
 // webviewController->put_RasterizationScale(scale);
