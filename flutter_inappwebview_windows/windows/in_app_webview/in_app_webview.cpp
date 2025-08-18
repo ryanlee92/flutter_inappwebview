@@ -2337,17 +2337,27 @@ namespace flutter_inappwebview_plugin
       auto scaled_width = width * scale_factor;
       auto scaled_height = height * scale_factor;
 
+      auto px = [&](double logical) { return (int)std::round(logical * scale); };
       RECT bounds;
       bounds.left = 0;
       bounds.top = 0;
       bounds.right = static_cast<LONG>(scaled_width);
       bounds.bottom = static_cast<LONG>(scaled_height);
 
-      surface_->put_Size({ scaled_width, scaled_height });
+      surface_->put_Size({ px(scaled_width), px(scaled_height) });
+
+      double scale = GetDpiForWindow(hwnd) / 96.0;
+
+// RECT r{ px(x), px(y), px(x+w), px(y+h) };
+// webviewController->put_Bounds(r);
+// webviewController->put_RasterizationScale(scale);
+// webviewController->put_ZoomFactor(1.0); // 내부 줌 금지
+
 
       wil::com_ptr<ICoreWebView2Controller3> webViewController3;
       if (SUCCEEDED(webViewController->QueryInterface(IID_PPV_ARGS(&webViewController3)))) {
         webViewController3->put_RasterizationScale(scale_factor);
+        webviewController->put_BoundsMode(COREWEBVIEW2_BOUNDS_MODE_USE_RASTERIZATION_SCALE);
       }
 
       if (webViewController->put_Bounds(bounds) != S_OK) {
