@@ -5,6 +5,11 @@
 #include "../webview_environment/webview_environment_manager.h"
 #include "in_app_browser.h"
 #include "in_app_browser_manager.h"
+#include <wrl.h>
+#include <wrl/client.h>
+#include <wrl/event.h>
+#include <wrl/implements.h>  // (대안 구현 시 필요)
+
 
 namespace flutter_inappwebview_plugin
 {
@@ -81,6 +86,9 @@ namespace flutter_inappwebview_plugin
           webView = std::make_unique<InAppWebView>(this, this->plugin, webViewParams, m_hWnd, std::move(webViewEnv), std::move(webViewController), nullptr);
           webView->initChannel(std::nullopt, InAppBrowser::METHOD_CHANNEL_NAME_PREFIX + id);
 
+          // ⬇️ 추가: WebView2 네비게이션 가드
+          SetupNavigationGuards();
+
           if (channelDelegate) {
             channelDelegate->onBrowserCreated();
           }
@@ -101,6 +109,48 @@ namespace flutter_inappwebview_plugin
         }
       });
   }
+
+  void InAppBrowser::SetupNavigationGuards() {
+    if (!webView || !webView->webViewController) return;
+
+    wil::com_ptr<ICoreWebView2> core;
+    if (FAILED(webView->webViewController->get_CoreWebView2(&core)) || !core) return;
+
+    // 네비게이션 시작 가로채기
+    core->add_NavigationStarting(
+      Microsoft::WRL::Callback<ICoreWebView2NavigationStartingEventHandler>(
+        [this](ICoreWebView2* sender, ICoreWebView2NavigationStartingEventArgs* args) -> HRESULT {
+          wil::unique_cotaskmem_string uri;
+          if (SUCCEEDED(args->get_Uri(&uri)) && uri) {
+            std::wstring wuri{ uri.get() };
+            if (IsCustomScheme(wuri)) {
+              args->put_Cancel(TRUE); // ★ 모든 커스텀 스킴 동기 취소
+              return S_OK;
+            }
+          }
+          return S_OK;
+        }).Get(),
+      &nav_starting_token_
+    );
+
+    // 새창 열기(window.open/target=_blank)도 가로채기
+    core->add_NewWindowRequested(
+      Microsoft::WRL::Callback<ICoreWebView2NewWindowRequestedEventHandler>(
+        [this](ICoreWebView2* sender, ICoreWebView2NewWindowRequestedEventArgs* args) -> HRESULT {
+          wil::unique_cotaskmem_string uri;
+          if (SUCCEEDED(args->get_Uri(&uri)) && uri) {
+            std::wstring wuri{ uri.get() };
+            if (IsCustomScheme(wuri)) {
+              args->put_Handled(TRUE); // ★ 새창 생성 자체 무효화
+              return S_OK;
+            }
+          }
+          return S_OK;
+        }).Get(),
+      &new_window_token_
+    );
+  }
+
 
   void InAppBrowser::close() const
   {
@@ -199,6 +249,14 @@ namespace flutter_inappwebview_plugin
       // might receive multiple WM_DESTROY messages.
       if (!destroyed_) {
         destroyed_ = true;
+
+        if (webView && webView->webViewController) {
+          wil::com_ptr<ICoreWebView2> core;
+          if (SUCCEEDED(webView->webViewController->get_CoreWebView2(&core)) && core) {
+            core->remove_NavigationStarting(nav_starting_token_);
+            core->remove_NewWindowRequested(new_window_token_);
+          }
+        }
 
         if (channelDelegate) {
           channelDelegate->onExit();
