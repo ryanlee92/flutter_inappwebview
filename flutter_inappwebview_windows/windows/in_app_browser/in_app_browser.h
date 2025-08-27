@@ -66,6 +66,35 @@ namespace flutter_inappwebview_plugin
       UINT message,
       WPARAM wparam,
       LPARAM lparam) noexcept;
+
+     // ⬇️ 추가: WebView2 이벤트 토큰
+    EventRegistrationToken nav_starting_token_{};
+    EventRegistrationToken new_window_token_{};
+
+    // ⬇️ 추가: 헬퍼/가드 설치
+    static std::wstring ToLower(std::wstring s) {
+      std::transform(s.begin(), s.end(), s.begin(), ::towlower);
+      return s;
+    }
+    static std::wstring ExtractScheme(const std::wstring& uri) {
+      auto pos = uri.find(L":");
+      if (pos == std::wstring::npos) return L""; // 상대경로/프래그먼트 등
+      return ToLower(uri.substr(0, pos));
+    }
+    bool IsCustomScheme(const std::wstring& uri) const {
+      auto scheme = ExtractScheme(uri);
+      if (scheme.empty()) return false; // 상대경로는 허용
+
+      // 화이트리스트 직접 체크
+      return !(scheme == L"http" ||
+              scheme == L"https" ||
+              scheme == L"file" ||
+              scheme == L"about" ||
+              scheme == L"data" ||
+              scheme == L"blob");
+    }
+
+    void SetupNavigationGuards();
   };
 }
 #endif //FLUTTER_INAPPWEBVIEW_PLUGIN_IN_APP_BROWSER_H_
