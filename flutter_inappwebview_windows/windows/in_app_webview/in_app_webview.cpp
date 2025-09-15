@@ -2618,9 +2618,10 @@ namespace flutter_inappwebview_plugin
     HWND parentHwnd = nullptr;
     if (succeededOrLog(webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
       LONG_PTR exStyle = GetWindowLongPtr(parentHwnd, GWL_EXSTYLE);
-      SetWindowLongPtr(parentHwnd, GWL_EXSTYLE, exStyle | WS_EX_TRANSPARENT);
+      exStyle |= WS_EX_TRANSPARENT | WS_EX_NOACTIVATE;
+      SetWindowLongPtr(parentHwnd, GWL_EXSTYLE, exStyle);
       SetWindowPos(parentHwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
-        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+        SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
     }
 
     return true;
