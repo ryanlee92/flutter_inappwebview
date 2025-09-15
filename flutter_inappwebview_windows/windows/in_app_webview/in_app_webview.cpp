@@ -2337,14 +2337,12 @@ namespace flutter_inappwebview_plugin
       auto scaled_width = width * scale_factor;
       auto scaled_height = height * scale_factor;
 
-      // Preserve current offset when resizing
-      RECT currentBounds{ 0, 0, 0, 0 };
-      (void)webViewController->get_Bounds(&currentBounds);
+      // Keep bounds origin at (0,0); visual offset controls position
       RECT bounds;
-      bounds.left = currentBounds.left;
-      bounds.top = currentBounds.top;
-      bounds.right = static_cast<LONG>(bounds.left + scaled_width);
-      bounds.bottom = static_cast<LONG>(bounds.top + scaled_height);
+      bounds.left = 0;
+      bounds.top = 0;
+      bounds.right = static_cast<LONG>(scaled_width);
+      bounds.bottom = static_cast<LONG>(scaled_height);
 
       surface_->put_Size({ scaled_width, scaled_height });
 
@@ -2374,19 +2372,7 @@ namespace flutter_inappwebview_plugin
       auto scaled_x = static_cast<int>(x * scale_factor);
       auto scaled_y = static_cast<int>(y * scale_factor);
 
-      // Update controller bounds to move the WebView without moving any HWND
-      RECT currentBounds{ 0, 0, 0, 0 };
-      (void)webViewController->get_Bounds(&currentBounds);
-      auto width = currentBounds.right - currentBounds.left;
-      auto height = currentBounds.bottom - currentBounds.top;
-      RECT bounds;
-      bounds.left = scaled_x;
-      bounds.top = scaled_y;
-      bounds.right = bounds.left + (width > 0 ? width : 0);
-      bounds.bottom = bounds.top + (height > 0 ? height : 0);
-      (void)webViewController->put_Bounds(bounds);
-
-      // Also offset the composition visual so rendering aligns with input
+      // Move only the visual; controller bounds remain at (0,0)
       if (surface_) {
         ABI::Windows::Foundation::Numerics::Vector3 offset{ (float)scaled_x, (float)scaled_y, 0.0f };
         surface_->put_Offset(offset);
