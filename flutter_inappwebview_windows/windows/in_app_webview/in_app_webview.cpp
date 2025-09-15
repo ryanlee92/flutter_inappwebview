@@ -2334,30 +2334,23 @@ namespace flutter_inappwebview_plugin
 
     if (surface_ && width > 0 && height > 0) {
       scaleFactor_ = scale_factor;
+      auto scaled_width = width * scale_factor;
+      auto scaled_height = height * scale_factor;
 
-      auto px = [&](double logical) { return (int)std::round(logical * scale_factor); };
-      auto scaled_width = px(width);
-      auto scaled_height = px(height);
-
+      // Preserve current offset when resizing
+      RECT currentBounds{ 0, 0, 0, 0 };
+      (void)webViewController->get_Bounds(&currentBounds);
       RECT bounds;
-      bounds.left = 0;
-      bounds.top = 0;
-      bounds.right = static_cast<LONG>(scaled_width);
-      bounds.bottom = static_cast<LONG>(scaled_height);
+      bounds.left = currentBounds.left;
+      bounds.top = currentBounds.top;
+      bounds.right = static_cast<LONG>(bounds.left + scaled_width);
+      bounds.bottom = static_cast<LONG>(bounds.top + scaled_height);
 
-      surface_->put_Size({ static_cast<float>(scaled_width), static_cast<float>(scaled_height) });
-
-      // double scale = GetDpiForWindow(hwnd) / 96.0;
-// RECT r{ px(x), px(y), px(x+w), px(y+h) };
-// webviewController->put_Bounds(r);
-// webviewController->put_RasterizationScale(scale);
-// webviewController->put_ZoomFactor(1.0); // 내부 줌 금지
-
+      surface_->put_Size({ scaled_width, scaled_height });
 
       wil::com_ptr<ICoreWebView2Controller3> webViewController3;
       if (SUCCEEDED(webViewController->QueryInterface(IID_PPV_ARGS(&webViewController3)))) {
         webViewController3->put_RasterizationScale(scale_factor);
-        webViewController3->put_BoundsMode(COREWEBVIEW2_BOUNDS_MODE_USE_RASTERIZATION_SCALE);
       }
 
       if (webViewController->put_Bounds(bounds) != S_OK) {
@@ -2381,25 +2374,22 @@ namespace flutter_inappwebview_plugin
       auto scaled_x = static_cast<int>(x * scale_factor);
       auto scaled_y = static_cast<int>(y * scale_factor);
 
-      auto titleBarHeight = ((GetSystemMetrics(SM_CYCAPTION) + GetSystemMetrics(SM_CYFRAME)) * scale_factor) + GetSystemMetrics(SM_CXPADDEDBORDER);
-      auto borderWidth = (GetSystemMetrics(SM_CXBORDER) + GetSystemMetrics(SM_CXPADDEDBORDER)) * scale_factor;
+      // Update controller bounds to move the WebView without moving any HWND
+      RECT currentBounds{ 0, 0, 0, 0 };
+      (void)webViewController->get_Bounds(&currentBounds);
+      auto width = currentBounds.right - currentBounds.left;
+      auto height = currentBounds.bottom - currentBounds.top;
+      RECT bounds;
+      bounds.left = scaled_x;
+      bounds.top = scaled_y;
+      bounds.right = bounds.left + (width > 0 ? width : 0);
+      bounds.bottom = bounds.top + (height > 0 ? height : 0);
+      (void)webViewController->put_Bounds(bounds);
 
-      RECT flutterWindowRect;
-      HWND flutterWindowHWnd = plugin->registrar->GetView()->GetNativeWindow();
-      GetWindowRect(flutterWindowHWnd, &flutterWindowRect);
-
-      // Convert Flutter view client coordinates to screen coordinates to position HWND correctly
-      POINT clientPoint{ static_cast<LONG>(scaled_x), static_cast<LONG>(scaled_y) };
-      ClientToScreen(flutterWindowHWnd, &clientPoint);
-
-      HWND webViewHWnd;
-      if (succeededOrLog(webViewController->get_ParentWindow(&webViewHWnd))) {
-        ::SetWindowPos(webViewHWnd,
-          nullptr,
-          static_cast<int>(clientPoint.x),
-          static_cast<int>(clientPoint.y),
-          0, 0,
-          SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
+      // Also offset the composition visual so rendering aligns with input
+      if (surface_) {
+        ABI::Windows::Foundation::Numerics::Vector3 offset{ (float)scaled_x, (float)scaled_y, 0.0f };
+        surface_->put_Offset(offset);
       }
     }
   }
@@ -2502,20 +2492,8 @@ namespace flutter_inappwebview_plugin
 
     switch (kind) {
     case InAppWebViewPointerEventKind::Down:
-      {
-        // Ensure the parent window is hit-testable during interaction and give focus to WebView
-        HWND parentHwnd = nullptr;
-        if (succeededOrLog(webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
-          LONG_PTR exStyle = GetWindowLongPtr(parentHwnd, GWL_EXSTYLE);
-          if (exStyle & WS_EX_TRANSPARENT) {
-            SetWindowLongPtr(parentHwnd, GWL_EXSTYLE, exStyle & ~WS_EX_TRANSPARENT);
-            SetWindowPos(parentHwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
-              SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-          }
-        }
-        // Move focus to WebView so it receives subsequent input
-        webViewController->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
-      }
+      // Move focus to WebView so it receives subsequent input
+      webViewController->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
       switch (button) {
       case InAppWebViewPointerButton::Primary:
         virtualKeys_.setIsLeftButtonDown(true);
@@ -2536,18 +2514,7 @@ namespace flutter_inappwebview_plugin
       point = lastCursorPos_;
       break;
     case InAppWebViewPointerEventKind::Up:
-      {
-        // Restore click-through after the interaction so desktop clicks are not blocked
-        HWND parentHwnd = nullptr;
-        if (succeededOrLog(webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
-          LONG_PTR exStyle = GetWindowLongPtr(parentHwnd, GWL_EXSTYLE);
-          if (!(exStyle & WS_EX_TRANSPARENT)) {
-            SetWindowLongPtr(parentHwnd, GWL_EXSTYLE, exStyle | WS_EX_TRANSPARENT);
-            SetWindowPos(parentHwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
-              SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
-          }
-        }
-      }
+      // Restore click-through after the interaction so desktop clicks are not blocked
       switch (button) {
       case InAppWebViewPointerButton::Primary:
         virtualKeys_.setIsLeftButtonDown(false);
