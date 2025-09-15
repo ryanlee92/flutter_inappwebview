@@ -2337,21 +2337,13 @@ namespace flutter_inappwebview_plugin
       auto scaled_width = width * scale_factor;
       auto scaled_height = height * scale_factor;
 
-      // Preserve current left/top position when resizing
-      RECT currentBounds{ 0, 0, 0, 0 };
-      (void)webViewController->get_Bounds(&currentBounds);
       RECT bounds;
-      bounds.left = currentBounds.left;
-      bounds.top = currentBounds.top;
-      bounds.right = static_cast<LONG>(bounds.left + scaled_width);
-      bounds.bottom = static_cast<LONG>(bounds.top + scaled_height);
+      bounds.left = 0;
+      bounds.top = 0;
+      bounds.right = static_cast<LONG>(scaled_width);
+      bounds.bottom = static_cast<LONG>(scaled_height);
 
       surface_->put_Size({ scaled_width, scaled_height });
-      // Clear any visual offset to keep input/render aligned with bounds
-      if (surface_) {
-        ABI::Windows::Foundation::Numerics::Vector3 zero{ 0.0f, 0.0f, 0.0f };
-        surface_->put_Offset(zero);
-      }
 
       wil::com_ptr<ICoreWebView2Controller3> webViewController3;
       if (SUCCEEDED(webViewController->QueryInterface(IID_PPV_ARGS(&webViewController3)))) {
@@ -2379,11 +2371,16 @@ namespace flutter_inappwebview_plugin
       auto scaled_x = static_cast<int>(x * scale_factor);
       auto scaled_y = static_cast<int>(y * scale_factor);
 
-      // Move only the visual; controller bounds remain at (0,0)
-      if (surface_) {
-        ABI::Windows::Foundation::Numerics::Vector3 offset{ (float)scaled_x, (float)scaled_y, 0.0f };
-        surface_->put_Offset(offset);
-      }
+      RECT bounds;
+      bounds.left = scaled_x;
+      bounds.top = scaled_y;
+      RECT currentBounds{ 0, 0, 0, 0 };
+      (void)webViewController->get_Bounds(&currentBounds);
+      LONG width = currentBounds.right - currentBounds.left;
+      LONG height = currentBounds.bottom - currentBounds.top;
+      bounds.right = bounds.left + (width > 0 ? width : 0);
+      bounds.bottom = bounds.top + (height > 0 ? height : 0);
+      (void)webViewController->put_Bounds(bounds);
     }
   }
 
@@ -2396,17 +2393,8 @@ namespace flutter_inappwebview_plugin
     POINT point;
     point.x = static_cast<LONG>(x * scaleFactor_);
     point.y = static_cast<LONG>(y * scaleFactor_);
-    // Align with visual offset if present
-    if (surface_) {
-      ABI::Windows::Foundation::Numerics::Vector3 offset;
-      if (SUCCEEDED(surface_->get_Offset(&offset))) {
-        point.x -= static_cast<LONG>(offset.X);
-        point.y -= static_cast<LONG>(offset.Y);
-      }
-    }
     lastCursorPos_ = point;
 
-    // https://docs.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2?view=webview2-1.0.774.44
     webViewCompositionController->SendMouseInput(
       COREWEBVIEW2_MOUSE_EVENT_KIND::COREWEBVIEW2_MOUSE_EVENT_KIND_MOVE,
       virtualKeys_.state(), 0, point);
@@ -2452,14 +2440,6 @@ namespace flutter_inappwebview_plugin
     POINT point;
     point.x = static_cast<LONG>(x * scaleFactor_);
     point.y = static_cast<LONG>(y * scaleFactor_);
-    // Align with visual offset for mouse button events
-    if (surface_) {
-      ABI::Windows::Foundation::Numerics::Vector3 offset;
-      if (SUCCEEDED(surface_->get_Offset(&offset))) {
-        point.x -= static_cast<LONG>(offset.X);
-        point.y -= static_cast<LONG>(offset.Y);
-      }
-    }
 
     RECT rect;
     rect.left = point.x - 2;
@@ -2550,14 +2530,6 @@ namespace flutter_inappwebview_plugin
       eventKind = static_cast<COREWEBVIEW2_MOUSE_EVENT_KIND>(0);
     }
 
-    // Adjust with visual offset for mouse button events
-    if (surface_) {
-      ABI::Windows::Foundation::Numerics::Vector3 offset;
-      if (SUCCEEDED(surface_->get_Offset(&offset))) {
-        point.x -= static_cast<LONG>(offset.X);
-        point.y -= static_cast<LONG>(offset.Y);
-      }
-    }
     webViewCompositionController->SendMouseInput(eventKind, eventVirtualKeys_, mouseData, point);
   }
 
@@ -2706,23 +2678,6 @@ namespace flutter_inappwebview_plugin
             debugLog("Bridge access attempt from a sub-frame origin: " + origin);
             return S_OK;
           }
-
-          /*
-          boolean isInternalHandler = true;
-          switch (handlerName) {
-          default:
-            isInternalHandler = false;
-            break;
-          }
-
-          if (isInternalHandler) {
-            evaluateJavascript("if (window." + JavaScriptBridgeJS::get_JAVASCRIPT_BRIDGE_NAME() + "[" + std::to_string(callHandlerID) + "] != null) { \
-                window." + JavaScriptBridgeJS::get_JAVASCRIPT_BRIDGE_NAME() + "[" + std::to_string(callHandlerID) + "].resolve(); \
-                delete window." + JavaScriptBridgeJS::get_JAVASCRIPT_BRIDGE_NAME() + "[" + std::to_string(callHandlerID) + "]; \
-              }", ContentWorld::page(), nullptr);
-            return S_OK;
-          }
-          */
 
           auto callback = std::make_unique<WebViewChannelDelegate::CallJsHandlerCallback>();
           callback->defaultBehaviour = [this, callHandlerID](const std::optional<const flutter::EncodableValue*> response)
