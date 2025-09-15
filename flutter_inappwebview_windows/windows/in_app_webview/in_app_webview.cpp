@@ -2514,7 +2514,7 @@ namespace flutter_inappwebview_plugin
           }
         }
         // Move focus to WebView so it receives subsequent input
-        webViewController->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_POINTER);
+        webViewController->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
       }
       switch (button) {
       case InAppWebViewPointerButton::Primary:
