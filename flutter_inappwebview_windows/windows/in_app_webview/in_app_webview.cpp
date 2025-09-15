@@ -2388,12 +2388,16 @@ namespace flutter_inappwebview_plugin
       HWND flutterWindowHWnd = plugin->registrar->GetView()->GetNativeWindow();
       GetWindowRect(flutterWindowHWnd, &flutterWindowRect);
 
+      // Convert Flutter view client coordinates to screen coordinates to position HWND correctly
+      POINT clientPoint{ static_cast<LONG>(scaled_x), static_cast<LONG>(scaled_y) };
+      ClientToScreen(flutterWindowHWnd, &clientPoint);
+
       HWND webViewHWnd;
       if (succeededOrLog(webViewController->get_ParentWindow(&webViewHWnd))) {
         ::SetWindowPos(webViewHWnd,
           nullptr,
-          static_cast<int>(flutterWindowRect.left + scaled_x - borderWidth),
-          static_cast<int>(flutterWindowRect.top + scaled_y - titleBarHeight),
+          static_cast<int>(clientPoint.x),
+          static_cast<int>(clientPoint.y),
           0, 0,
           SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
       }
