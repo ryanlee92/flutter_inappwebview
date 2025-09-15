@@ -2396,6 +2396,14 @@ namespace flutter_inappwebview_plugin
     POINT point;
     point.x = static_cast<LONG>(x * scaleFactor_);
     point.y = static_cast<LONG>(y * scaleFactor_);
+    // Align with visual offset if present
+    if (surface_) {
+      ABI::Windows::Foundation::Numerics::Vector3 offset;
+      if (SUCCEEDED(surface_->get_Offset(&offset))) {
+        point.x -= static_cast<LONG>(offset.X);
+        point.y -= static_cast<LONG>(offset.Y);
+      }
+    }
     lastCursorPos_ = point;
 
     // https://docs.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2?view=webview2-1.0.774.44
@@ -2444,6 +2452,14 @@ namespace flutter_inappwebview_plugin
     POINT point;
     point.x = static_cast<LONG>(x * scaleFactor_);
     point.y = static_cast<LONG>(y * scaleFactor_);
+    // Align with visual offset for mouse button events
+    if (surface_) {
+      ABI::Windows::Foundation::Numerics::Vector3 offset;
+      if (SUCCEEDED(surface_->get_Offset(&offset))) {
+        point.x -= static_cast<LONG>(offset.X);
+        point.y -= static_cast<LONG>(offset.Y);
+      }
+    }
 
     RECT rect;
     rect.left = point.x - 2;
@@ -2534,6 +2550,14 @@ namespace flutter_inappwebview_plugin
       eventKind = static_cast<COREWEBVIEW2_MOUSE_EVENT_KIND>(0);
     }
 
+    // Adjust with visual offset for mouse button events
+    if (surface_) {
+      ABI::Windows::Foundation::Numerics::Vector3 offset;
+      if (SUCCEEDED(surface_->get_Offset(&offset))) {
+        point.x -= static_cast<LONG>(offset.X);
+        point.y -= static_cast<LONG>(offset.Y);
+      }
+    }
     webViewCompositionController->SendMouseInput(eventKind, eventVirtualKeys_, mouseData, point);
   }
 
