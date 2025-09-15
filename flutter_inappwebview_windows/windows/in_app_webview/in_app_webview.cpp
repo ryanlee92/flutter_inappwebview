@@ -2337,14 +2337,21 @@ namespace flutter_inappwebview_plugin
       auto scaled_width = width * scale_factor;
       auto scaled_height = height * scale_factor;
 
-      // Keep bounds origin at (0,0); visual offset controls position
+      // Preserve current left/top position when resizing
+      RECT currentBounds{ 0, 0, 0, 0 };
+      (void)webViewController->get_Bounds(&currentBounds);
       RECT bounds;
-      bounds.left = 0;
-      bounds.top = 0;
-      bounds.right = static_cast<LONG>(scaled_width);
-      bounds.bottom = static_cast<LONG>(scaled_height);
+      bounds.left = currentBounds.left;
+      bounds.top = currentBounds.top;
+      bounds.right = static_cast<LONG>(bounds.left + scaled_width);
+      bounds.bottom = static_cast<LONG>(bounds.top + scaled_height);
 
       surface_->put_Size({ scaled_width, scaled_height });
+      // Clear any visual offset to keep input/render aligned with bounds
+      if (surface_) {
+        ABI::Windows::Foundation::Numerics::Vector3 zero{ 0.0f, 0.0f, 0.0f };
+        surface_->put_Offset(zero);
+      }
 
       wil::com_ptr<ICoreWebView2Controller3> webViewController3;
       if (SUCCEEDED(webViewController->QueryInterface(IID_PPV_ARGS(&webViewController3)))) {
