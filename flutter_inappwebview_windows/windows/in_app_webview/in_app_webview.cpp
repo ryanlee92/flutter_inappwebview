@@ -2349,7 +2349,7 @@ namespace flutter_inappwebview_plugin
       bounds.right = static_cast<LONG>(bounds.left + scaled_width);
       bounds.bottom = static_cast<LONG>(bounds.top + scaled_height);
 
-      surface_->put_Size({ scaled_width, scaled_height });
+      surface_->put_Size({ static_cast<float>(scaled_width), static_cast<float>(scaled_height) });
 
       wil::com_ptr<ICoreWebView2Controller3> webViewController3;
       if (SUCCEEDED(webViewController->QueryInterface(IID_PPV_ARGS(&webViewController3)))) {
@@ -2380,14 +2380,7 @@ namespace flutter_inappwebview_plugin
           static_cast<int>(scaled_height),
           SWP_NOZORDER | SWP_NOACTIVATE);
 
-        // Apply window region so only WebView area is hit-testable
-        HRGN rgn = CreateRectRgn(0, 0, static_cast<int>(scaled_width), static_cast<int>(scaled_height));
-        if (rgn) {
-          SetWindowRgn(parentHwnd, rgn, TRUE);
-          // ownership transfers to the system
-        }
-
-        // Make overlay pass-through so desktop clicks outside WebView go through
+        // Make overlay pass-through
         if (parentHwnd != flutterWindowHWnd) {
           LONG_PTR ex = GetWindowLongPtr(parentHwnd, GWL_EXSTYLE);
           SetWindowLongPtr(parentHwnd, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
