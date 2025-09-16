@@ -17,6 +17,23 @@
 
 namespace flutter_inappwebview_plugin
 {
+  static LRESULT CALLBACK TransparentWndProc(
+    HWND hwnd,
+    UINT message,
+    WPARAM wparam,
+    LPARAM lparam) noexcept
+  {
+    switch (message) {
+    case WM_NCHITTEST:
+      return HTTRANSPARENT;
+    case WM_MOUSEACTIVATE:
+      return MA_NOACTIVATEANDEAT;
+    default:
+      break;
+    }
+    return DefWindowProc(hwnd, message, wparam, lparam);
+  }
+
   InAppWebViewManager::InAppWebViewManager(const FlutterInappwebviewWindowsPlugin* plugin)
     : plugin(plugin),
     ChannelDelegate(plugin->registrar->messenger(), InAppWebViewManager::METHOD_CHANNEL_NAME)
@@ -53,7 +70,7 @@ namespace flutter_inappwebview_plugin
     }
 
     windowClass_.lpszClassName = CustomPlatformView::CLASS_NAME;
-    windowClass_.lpfnWndProc = &DefWindowProc;
+    windowClass_.lpfnWndProc = &TransparentWndProc;
 
     RegisterClass(&windowClass_);
   }
