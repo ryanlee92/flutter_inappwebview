@@ -195,6 +195,8 @@ namespace flutter_inappwebview_plugin
     float scaleFactor_ = 1.0;
     POINT lastCursorPos_ = { 0, 0 };
     VirtualKeyState virtualKeys_;
+    // Top-left origin of the WebView (in device pixels) within the Flutter window
+    POINT webViewOriginPx_ = { 0, 0 };
 
     const std::string expectedBridgeSecret = get_uuid();
     bool javaScriptBridgeEnabled = true;
