@@ -2333,9 +2333,9 @@ namespace flutter_inappwebview_plugin
     }
 
     if (surface_ && width > 0 && height > 0) {
-      scaleFactor_ = scale_factor;
-      auto scaled_width = width * scale_factor;
-      auto scaled_height = height * scale_factor;
+      // Treat provided width/height as raw pixels to avoid double-scaling
+      auto scaled_width = static_cast<double>(width);
+      auto scaled_height = static_cast<double>(height);
 
       // Keep current left/top offset
       RECT currentBounds{ 0, 0, 0, 0 };
@@ -2353,7 +2353,8 @@ namespace flutter_inappwebview_plugin
 
       wil::com_ptr<ICoreWebView2Controller3> webViewController3;
       if (SUCCEEDED(webViewController->QueryInterface(IID_PPV_ARGS(&webViewController3)))) {
-        webViewController3->put_RasterizationScale(scale_factor);
+        // Keep rasterization scale at 1.0 when using raw pixel bounds
+        webViewController3->put_RasterizationScale(1.0);
       }
 
       if (webViewController->put_Bounds(bounds) != S_OK) {
@@ -2400,24 +2401,15 @@ namespace flutter_inappwebview_plugin
     }
 
     if (x >= 0 && y >= 0) {
-      // Use the controller's current rasterization scale to avoid mismatches
-      double rasterScale = scaleFactor_;
-      if (auto controller3 = webViewController.try_query<ICoreWebView2Controller3>()) {
-        double currentScale = 1.0;
-        if (SUCCEEDED(controller3->get_RasterizationScale(&currentScale))) {
-          rasterScale = currentScale;
-        }
-      }
-
-      auto scaled_x = static_cast<int>(x * rasterScale);
-      auto scaled_y = static_cast<int>(y * rasterScale);
+      // Treat provided x/y as raw pixels to avoid double-scaling
+      auto scaled_x = static_cast<int>(x);
+      auto scaled_y = static_cast<int>(y);
 
       RECT currentBounds{ 0, 0, 0, 0 };
       (void)webViewController->get_Bounds(&currentBounds);
       LONG widthPx = currentBounds.right - currentBounds.left;
       LONG heightPx = currentBounds.bottom - currentBounds.top;
 
-      // If size is not set yet, skip moving to avoid odd input regions
       if (widthPx <= 0 || heightPx <= 0) {
         return;
       }
