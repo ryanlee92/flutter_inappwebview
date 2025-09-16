@@ -2394,6 +2394,20 @@ namespace flutter_inappwebview_plugin
           ::SetWindowPos(parentHwnd, nullptr, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
         }
+
+        // Ensure all child windows are also pass-through and region-clipped
+        for (HWND child = GetWindow(parentHwnd, GW_CHILD); child != nullptr; child = GetWindow(child, GW_HWNDNEXT)) {
+          LONG_PTR exChild = GetWindowLongPtr(child, GWL_EXSTYLE);
+          SetWindowLongPtr(child, GWL_EXSTYLE, exChild | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
+          RECT cr; GetClientRect(child, &cr);
+          int cw = cr.right - cr.left; int ch = cr.bottom - cr.top;
+          if (cw > 0 && ch > 0) {
+            HRGN crgn = CreateRectRgn(0, 0, cw, ch);
+            if (crgn) {
+              SetWindowRgn(child, crgn, TRUE);
+            }
+          }
+        }
       }
 
       if (surfaceSizeChangedCallback_) {
@@ -2451,12 +2465,16 @@ namespace flutter_inappwebview_plugin
           0, 0,
           SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 
-        // Keep overlay pass-through
+        // Keep overlay pass-through and propagate to children
         if (parentHwnd != flutterWindowHWnd) {
           LONG_PTR ex = GetWindowLongPtr(parentHwnd, GWL_EXSTYLE);
           SetWindowLongPtr(parentHwnd, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
           ::SetWindowPos(parentHwnd, nullptr, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        }
+        for (HWND child = GetWindow(parentHwnd, GW_CHILD); child != nullptr; child = GetWindow(child, GW_HWNDNEXT)) {
+          LONG_PTR exChild = GetWindowLongPtr(child, GWL_EXSTYLE);
+          SetWindowLongPtr(child, GWL_EXSTYLE, exChild | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
         }
       }
     }
