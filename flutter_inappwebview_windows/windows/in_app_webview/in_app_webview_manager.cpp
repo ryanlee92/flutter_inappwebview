@@ -122,8 +122,9 @@ namespace flutter_inappwebview_plugin
     RECT bounds;
     GetClientRect(plugin->registrar->GetView()->GetNativeWindow(), &bounds);
 
-    auto hwnd = CreateWindowEx(0, windowClass_.lpszClassName, L"", 0, 0,
-      0, bounds.right - bounds.left, bounds.bottom - bounds.top,
+    auto hwnd = CreateWindowEx(0, windowClass_.lpszClassName, L"",
+      WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE,
+      0, 0, bounds.right - bounds.left, bounds.bottom - bounds.top,
       plugin->registrar->GetView()->GetNativeWindow(),
       nullptr,
       windowClass_.hInstance, nullptr);
