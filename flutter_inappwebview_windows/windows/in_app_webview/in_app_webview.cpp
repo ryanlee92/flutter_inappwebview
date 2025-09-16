@@ -2674,7 +2674,10 @@ namespace flutter_inappwebview_plugin
         if (SUCCEEDED(compositor->CreateColorBrush(brush.put())) && brush) {
           ABI::Windows::UI::Color color; color.A = 128; color.R = 255; color.G = 0; color.B = 0;
           brush->put_Color(color);
-          bgSprite->put_Brush(brush.get());
+          auto brushBase = brush.try_as<ABI::Windows::UI::Composition::ICompositionBrush>();
+          if (brushBase) {
+            bgSprite->put_Brush(brushBase.get());
+          }
         }
         auto bgVisual2 = bgSprite.try_as<ABI::Windows::UI::Composition::IVisual2>();
         if (bgVisual2) {
