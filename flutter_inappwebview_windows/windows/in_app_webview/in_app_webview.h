@@ -197,6 +197,8 @@ namespace flutter_inappwebview_plugin
     VirtualKeyState virtualKeys_;
     // Top-left origin of the WebView (in device pixels) within the Flutter window
     POINT webViewOriginPx_ = { 0, 0 };
+    // Left/top offset of WebView bounds inside the Flutter window (device pixels)
+    POINT webViewOffsetPx_ = { 0, 0 };
 
     const std::string expectedBridgeSecret = get_uuid();
     bool javaScriptBridgeEnabled = true;
