@@ -2368,21 +2368,35 @@ namespace flutter_inappwebview_plugin
     if (!webViewController || !plugin || !plugin->registrar) {
       return;
     }
-
+ 
     if (x >= 0 && y >= 0) {
-      scaleFactor_ = scale_factor;
-      auto scaled_x = static_cast<int>(x * scale_factor);
-      auto scaled_y = static_cast<int>(y * scale_factor);
+      // Use the controller's current rasterization scale to avoid mismatches
+      double rasterScale = scaleFactor_;
+      if (auto controller3 = webViewController.try_query<ICoreWebView2Controller3>()) {
+        double currentScale = 1.0;
+        if (SUCCEEDED(controller3->get_RasterizationScale(&currentScale))) {
+          rasterScale = currentScale;
+        }
+      }
 
-      RECT bounds;
-      bounds.left = scaled_x;
-      bounds.top = scaled_y;
+      auto scaled_x = static_cast<int>(x * rasterScale);
+      auto scaled_y = static_cast<int>(y * rasterScale);
+
       RECT currentBounds{ 0, 0, 0, 0 };
       (void)webViewController->get_Bounds(&currentBounds);
       LONG width = currentBounds.right - currentBounds.left;
       LONG height = currentBounds.bottom - currentBounds.top;
-      bounds.right = bounds.left + (width > 0 ? width : 0);
-      bounds.bottom = bounds.top + (height > 0 ? height : 0);
+
+      // If size is not set yet, skip moving to avoid odd input regions
+      if (width <= 0 || height <= 0) {
+        return;
+      }
+
+      RECT bounds;
+      bounds.left = scaled_x;
+      bounds.top = scaled_y;
+      bounds.right = bounds.left + width;
+      bounds.bottom = bounds.top + height;
       (void)webViewController->put_Bounds(bounds);
     }
   }
