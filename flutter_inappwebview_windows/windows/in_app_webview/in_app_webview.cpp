@@ -2384,7 +2384,15 @@ namespace flutter_inappwebview_plugin
         HRGN rgn = CreateRectRgn(0, 0, static_cast<int>(scaled_width), static_cast<int>(scaled_height));
         if (rgn) {
           SetWindowRgn(parentHwnd, rgn, TRUE);
-          // Do not DeleteObject(rgn); ownership transfers to the system
+          // ownership transfers to the system
+        }
+
+        // Make overlay pass-through so desktop clicks outside WebView go through
+        if (parentHwnd != flutterWindowHWnd) {
+          LONG_PTR ex = GetWindowLongPtr(parentHwnd, GWL_EXSTYLE);
+          SetWindowLongPtr(parentHwnd, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
+          ::SetWindowPos(parentHwnd, nullptr, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
         }
       }
 
@@ -2442,6 +2450,14 @@ namespace flutter_inappwebview_plugin
           static_cast<int>(pt.y),
           0, 0,
           SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+
+        // Keep overlay pass-through
+        if (parentHwnd != flutterWindowHWnd) {
+          LONG_PTR ex = GetWindowLongPtr(parentHwnd, GWL_EXSTYLE);
+          SetWindowLongPtr(parentHwnd, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
+          ::SetWindowPos(parentHwnd, nullptr, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        }
       }
     }
   }
