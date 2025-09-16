@@ -2422,6 +2422,10 @@ namespace flutter_inappwebview_plugin
           0, 0,
           SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
       }
+
+      // Track pixel origin for input alignment
+      webViewOriginPx_.x = clientPoint.x;
+      webViewOriginPx_.y = clientPoint.y;
     }
   }
 
@@ -2434,6 +2438,12 @@ namespace flutter_inappwebview_plugin
     POINT point;
     point.x = static_cast<LONG>(x * scaleFactor_);
     point.y = static_cast<LONG>(y * scaleFactor_);
+    // Convert from Flutter client pixels to WebView local pixels
+    HWND flutterWindowHWnd = plugin->registrar->GetView()->GetNativeWindow();
+    POINT clientToScreen = { 0, 0 };
+    ClientToScreen(flutterWindowHWnd, &clientToScreen);
+    point.x -= (webViewOriginPx_.x - clientToScreen.x);
+    point.y -= (webViewOriginPx_.y - clientToScreen.y);
     lastCursorPos_ = point;
 
     webViewCompositionController->SendMouseInput(
