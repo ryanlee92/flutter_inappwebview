@@ -2334,9 +2334,8 @@ namespace flutter_inappwebview_plugin
 
     if (surface_ && width > 0 && height > 0) {
       scaleFactor_ = scale_factor;
-      // Force surface size to 1x1 for testing
-      auto scaled_width = 1.0;
-      auto scaled_height = 1.0;
+      auto scaled_width = width * scale_factor;
+      auto scaled_height = height * scale_factor;
 
       // Keep current left/top offset
       RECT currentBounds{ 0, 0, 0, 0 };
@@ -2359,27 +2358,6 @@ namespace flutter_inappwebview_plugin
 
       if (webViewController->put_Bounds(bounds) != S_OK) {
         std::cerr << "Setting webview bounds failed." << std::endl;
-      }
-
-      // Ensure the native parent window matches the size
-      HWND parentHwnd = nullptr;
-      if (succeededOrLog(webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
-        // Move to the same offset inside the Flutter window hierarchy
-        HWND flutterWindowHWnd = plugin->registrar->GetView()->GetNativeWindow();
-        POINT pt{ webViewOffsetPx_.x, webViewOffsetPx_.y };
-        HWND overlayParent = GetParent(parentHwnd);
-        if (overlayParent != nullptr) {
-          MapWindowPoints(flutterWindowHWnd, overlayParent, &pt, 1);
-        } else {
-          ClientToScreen(flutterWindowHWnd, &pt);
-        }
-        ::SetWindowPos(parentHwnd,
-          nullptr,
-          static_cast<int>(pt.x),
-          static_cast<int>(pt.y),
-          static_cast<int>(scaled_width),
-          static_cast<int>(scaled_height),
-          SWP_NOZORDER | SWP_NOACTIVATE);
       }
 
       if (surfaceSizeChangedCallback_) {
@@ -2409,39 +2387,24 @@ namespace flutter_inappwebview_plugin
 
       RECT currentBounds{ 0, 0, 0, 0 };
       (void)webViewController->get_Bounds(&currentBounds);
-      LONG width = currentBounds.right - currentBounds.left;
-      LONG height = currentBounds.bottom - currentBounds.top;
+      LONG widthPx = currentBounds.right - currentBounds.left;
+      LONG heightPx = currentBounds.bottom - currentBounds.top;
 
       // If size is not set yet, skip moving to avoid odd input regions
-      if (width <= 0 || height <= 0) {
+      if (widthPx <= 0 || heightPx <= 0) {
         return;
       }
 
       RECT bounds;
       bounds.left = scaled_x;
       bounds.top = scaled_y;
-      bounds.right = bounds.left + width;
-      bounds.bottom = bounds.top + height;
+      bounds.right = bounds.left + widthPx;
+      bounds.bottom = bounds.top + heightPx;
       (void)webViewController->put_Bounds(bounds);
 
-      // Move the native parent window to the correct screen position
-      HWND flutterWindowHWnd = plugin->registrar->GetView()->GetNativeWindow();
-      POINT clientPoint{ static_cast<LONG>(scaled_x), static_cast<LONG>(scaled_y) };
-      ClientToScreen(flutterWindowHWnd, &clientPoint);
-
-      HWND parentHwnd = nullptr;
-      if (succeededOrLog(webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
-        ::SetWindowPos(parentHwnd,
-          nullptr,
-          static_cast<int>(clientPoint.x),
-          static_cast<int>(clientPoint.y),
-          0, 0,
-          SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-      }
-
-      // Track pixel origin for input alignment
-      webViewOriginPx_.x = clientPoint.x;
-      webViewOriginPx_.y = clientPoint.y;
+      // Update input offset to match new bounds
+      webViewOffsetPx_.x = scaled_x;
+      webViewOffsetPx_.y = scaled_y;
     }
   }
 
