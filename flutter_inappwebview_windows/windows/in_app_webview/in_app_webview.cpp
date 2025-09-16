@@ -2360,6 +2360,33 @@ namespace flutter_inappwebview_plugin
         std::cerr << "Setting webview bounds failed." << std::endl;
       }
 
+      // Constrain overlay parent HWND to match bounds (position and size)
+      HWND parentHwnd = nullptr;
+      if (succeededOrLog(webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
+        HWND flutterWindowHWnd = plugin->registrar->GetView()->GetNativeWindow();
+        POINT pt{ webViewOffsetPx_.x, webViewOffsetPx_.y };
+        HWND overlayParent = GetParent(parentHwnd);
+        if (overlayParent != nullptr) {
+          MapWindowPoints(flutterWindowHWnd, overlayParent, &pt, 1);
+        } else {
+          ClientToScreen(flutterWindowHWnd, &pt);
+        }
+        ::SetWindowPos(parentHwnd,
+          nullptr,
+          static_cast<int>(pt.x),
+          static_cast<int>(pt.y),
+          static_cast<int>(scaled_width),
+          static_cast<int>(scaled_height),
+          SWP_NOZORDER | SWP_NOACTIVATE);
+
+        // Apply window region so only WebView area is hit-testable
+        HRGN rgn = CreateRectRgn(0, 0, static_cast<int>(scaled_width), static_cast<int>(scaled_height));
+        if (rgn) {
+          SetWindowRgn(parentHwnd, rgn, TRUE);
+          // Do not DeleteObject(rgn); ownership transfers to the system
+        }
+      }
+
       if (surfaceSizeChangedCallback_) {
         surfaceSizeChangedCallback_(width, height);
       }
@@ -2405,6 +2432,25 @@ namespace flutter_inappwebview_plugin
       // Update input offset to match new bounds
       webViewOffsetPx_.x = scaled_x;
       webViewOffsetPx_.y = scaled_y;
+
+      // Keep overlay parent HWND aligned to new position
+      HWND parentHwnd = nullptr;
+      if (succeededOrLog(webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
+        HWND flutterWindowHWnd = plugin->registrar->GetView()->GetNativeWindow();
+        POINT pt{ scaled_x, scaled_y };
+        HWND overlayParent = GetParent(parentHwnd);
+        if (overlayParent != nullptr) {
+          MapWindowPoints(flutterWindowHWnd, overlayParent, &pt, 1);
+        } else {
+          ClientToScreen(flutterWindowHWnd, &pt);
+        }
+        ::SetWindowPos(parentHwnd,
+          nullptr,
+          static_cast<int>(pt.x),
+          static_cast<int>(pt.y),
+          0, 0,
+          SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+      }
     }
   }
 
