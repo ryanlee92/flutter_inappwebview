@@ -2338,13 +2338,11 @@ namespace flutter_inappwebview_plugin
       auto scaled_height = height * scale_factor;
 
       // Preserve current left/top while updating size
-      RECT currentBounds{ 0, 0, 0, 0 };
-      (void)webViewController->get_Bounds(&currentBounds);
       RECT bounds;
-      bounds.left = currentBounds.left;
-      bounds.top = currentBounds.top;
-      bounds.right = static_cast<LONG>(bounds.left + scaled_width);
-      bounds.bottom = static_cast<LONG>(bounds.top + scaled_height);
+      bounds.left = 0;
+      bounds.top = 0;
+      bounds.right = static_cast<LONG>(scaled_width);
+      bounds.bottom = static_cast<LONG>(scaled_height);
 
       surface_->put_Size({ scaled_width, scaled_height });
 
@@ -2355,6 +2353,17 @@ namespace flutter_inappwebview_plugin
 
       if (webViewController->put_Bounds(bounds) != S_OK) {
         std::cerr << "Setting webview bounds failed." << std::endl;
+      }
+
+      // Keep parent HWND size in sync so it doesn't intercept input outside bounds
+      HWND parentHwnd = nullptr;
+      if (succeededOrLog(webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
+        ::SetWindowPos(parentHwnd,
+          nullptr,
+          0, 0,
+          static_cast<int>(scaled_width),
+          static_cast<int>(scaled_height),
+          SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
       }
 
       if (surfaceSizeChangedCallback_) {
@@ -2368,7 +2377,7 @@ namespace flutter_inappwebview_plugin
     if (!webViewController || !plugin || !plugin->registrar) {
       return;
     }
- 
+
     if (x >= 0 && y >= 0) {
       // Use the controller's current rasterization scale to avoid mismatches
       double rasterScale = scaleFactor_;
@@ -2398,6 +2407,21 @@ namespace flutter_inappwebview_plugin
       bounds.right = bounds.left + width;
       bounds.bottom = bounds.top + height;
       (void)webViewController->put_Bounds(bounds);
+
+      // Move the native parent window to the correct screen position
+      HWND flutterWindowHWnd = plugin->registrar->GetView()->GetNativeWindow();
+      POINT clientPoint{ static_cast<LONG>(scaled_x), static_cast<LONG>(scaled_y) };
+      ClientToScreen(flutterWindowHWnd, &clientPoint);
+
+      HWND parentHwnd = nullptr;
+      if (succeededOrLog(webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
+        ::SetWindowPos(parentHwnd,
+          nullptr,
+          static_cast<int>(clientPoint.x),
+          static_cast<int>(clientPoint.y),
+          0, 0,
+          SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+      }
     }
   }
 
