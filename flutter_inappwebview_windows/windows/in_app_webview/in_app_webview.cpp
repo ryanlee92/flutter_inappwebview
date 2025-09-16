@@ -2665,6 +2665,26 @@ namespace flutter_inappwebview_plugin
     winrt::com_ptr<ABI::Windows::UI::Composition::IVisualCollection> children;
     root->get_Children(children.put());
     children->InsertAtTop(webview_visual.get());
+
+    // Debug: add red background fill to visualize the surface area
+    do {
+      winrt::com_ptr<ABI::Windows::UI::Composition::ISpriteVisual> bgSprite;
+      if (SUCCEEDED(compositor->CreateSpriteVisual(bgSprite.put())) && bgSprite) {
+        winrt::com_ptr<ABI::Windows::UI::Composition::ICompositionColorBrush> brush;
+        if (SUCCEEDED(compositor->CreateColorBrush(brush.put())) && brush) {
+          ABI::Windows::UI::Color color; color.A = 128; color.R = 255; color.G = 0; color.B = 0;
+          brush->put_Color(color);
+          bgSprite->put_Brush(brush.get());
+        }
+        auto bgVisual2 = bgSprite.try_as<ABI::Windows::UI::Composition::IVisual2>();
+        if (bgVisual2) {
+          bgVisual2->put_RelativeSizeAdjustment({ 1.0f, 1.0f });
+        }
+        children->InsertAtBottom(bgSprite.get());
+      }
+    } while (false);
+
+    children->InsertAtTop(webview_visual.get());
     webViewCompositionController->put_RootVisualTarget(webview_visual2.get());
 
     webViewController->put_IsVisible(true);
