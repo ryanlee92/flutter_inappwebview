@@ -2337,12 +2337,17 @@ namespace flutter_inappwebview_plugin
       auto scaled_width = width * scale_factor;
       auto scaled_height = height * scale_factor;
 
-      // Preserve current left/top while updating size
+      // Keep current left/top offset
+      RECT currentBounds{ 0, 0, 0, 0 };
+      (void)webViewController->get_Bounds(&currentBounds);
+      webViewOffsetPx_.x = currentBounds.left;
+      webViewOffsetPx_.y = currentBounds.top;
+
       RECT bounds;
-      bounds.left = 0;
-      bounds.top = 0;
-      bounds.right = static_cast<LONG>(scaled_width);
-      bounds.bottom = static_cast<LONG>(scaled_height);
+      bounds.left = webViewOffsetPx_.x;
+      bounds.top = webViewOffsetPx_.y;
+      bounds.right = static_cast<LONG>(bounds.left + scaled_width);
+      bounds.bottom = static_cast<LONG>(bounds.top + scaled_height);
 
       surface_->put_Size({ scaled_width, scaled_height });
 
@@ -2355,15 +2360,25 @@ namespace flutter_inappwebview_plugin
         std::cerr << "Setting webview bounds failed." << std::endl;
       }
 
-      // Keep parent HWND size in sync so it doesn't intercept input outside bounds
+      // Ensure the native parent window matches the size
       HWND parentHwnd = nullptr;
       if (succeededOrLog(webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
+        // Move to the same offset inside the Flutter window hierarchy
+        HWND flutterWindowHWnd = plugin->registrar->GetView()->GetNativeWindow();
+        POINT pt{ webViewOffsetPx_.x, webViewOffsetPx_.y };
+        HWND overlayParent = GetParent(parentHwnd);
+        if (overlayParent != nullptr) {
+          MapWindowPoints(flutterWindowHWnd, overlayParent, &pt, 1);
+        } else {
+          ClientToScreen(flutterWindowHWnd, &pt);
+        }
         ::SetWindowPos(parentHwnd,
           nullptr,
-          0, 0,
+          static_cast<int>(pt.x),
+          static_cast<int>(pt.y),
           static_cast<int>(scaled_width),
           static_cast<int>(scaled_height),
-          SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+          SWP_NOZORDER | SWP_NOACTIVATE);
       }
 
       if (surfaceSizeChangedCallback_) {
@@ -2438,12 +2453,9 @@ namespace flutter_inappwebview_plugin
     POINT point;
     point.x = static_cast<LONG>(x * scaleFactor_);
     point.y = static_cast<LONG>(y * scaleFactor_);
-    // Convert from Flutter client pixels to WebView local pixels
-    HWND flutterWindowHWnd = plugin->registrar->GetView()->GetNativeWindow();
-    POINT clientToScreen = { 0, 0 };
-    ClientToScreen(flutterWindowHWnd, &clientToScreen);
-    point.x -= (webViewOriginPx_.x - clientToScreen.x);
-    point.y -= (webViewOriginPx_.y - clientToScreen.y);
+    // Convert Flutter client pixels to WebView local pixels: subtract current offset
+    point.x -= webViewOffsetPx_.x;
+    point.y -= webViewOffsetPx_.y;
     lastCursorPos_ = point;
 
     webViewCompositionController->SendMouseInput(
@@ -2491,6 +2503,9 @@ namespace flutter_inappwebview_plugin
     POINT point;
     point.x = static_cast<LONG>(x * scaleFactor_);
     point.y = static_cast<LONG>(y * scaleFactor_);
+    // Convert Flutter client pixels to WebView local pixels: subtract current offset
+    point.x -= webViewOffsetPx_.x;
+    point.y -= webViewOffsetPx_.y;
 
     RECT rect;
     rect.left = point.x - 2;
