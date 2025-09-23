@@ -2365,7 +2365,8 @@ namespace flutter_inappwebview_plugin
       HWND parentHwnd = nullptr;
       if (succeededOrLog(webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
         HWND flutterWindowHWnd = plugin->registrar->GetView()->GetNativeWindow();
-        POINT pt{ webViewOffsetPx_.x, webViewOffsetPx_.y };
+        POINT ptFlutter{ webViewOffsetPx_.x, webViewOffsetPx_.y };
+        POINT pt = ptFlutter; // coordinates for parentHwnd (relative to its parent)
         HWND overlayParent = GetParent(parentHwnd);
         if (overlayParent != nullptr) {
           MapWindowPoints(flutterWindowHWnd, overlayParent, &pt, 1);
@@ -2386,6 +2387,22 @@ namespace flutter_inappwebview_plugin
           static_cast<int>(scaled_width), static_cast<int>(scaled_height));
         if (parentRegion) {
           SetWindowRgn(parentHwnd, parentRegion, TRUE);
+        }
+
+        // Also reposition and constrain the overlay host window to the same rect
+        if (overlayParent != nullptr) {
+          ::SetWindowPos(overlayParent,
+            nullptr,
+            static_cast<int>(ptFlutter.x),
+            static_cast<int>(ptFlutter.y),
+            static_cast<int>(scaled_width),
+            static_cast<int>(scaled_height),
+            SWP_NOZORDER | SWP_NOACTIVATE);
+          HRGN overlayRegion = CreateRectRgn(0, 0,
+            static_cast<int>(scaled_width), static_cast<int>(scaled_height));
+          if (overlayRegion) {
+            SetWindowRgn(overlayParent, overlayRegion, TRUE);
+          }
         }
 
         // Make overlay and all descendants pass-through
