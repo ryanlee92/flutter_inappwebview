@@ -1,4 +1,3 @@
-#include <Windows.h>
 #include <DispatcherQueue.h>
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
@@ -19,29 +18,12 @@
 
 namespace flutter_inappwebview_plugin
 {
-  static LRESULT CALLBACK TransparentWndProc(
-    HWND hwnd,
-    UINT message,
-    WPARAM wparam,
-    LPARAM lparam) noexcept
-  {
-    switch (message) {
-    case WM_NCHITTEST:
-      return HTTRANSPARENT;
-    case WM_MOUSEACTIVATE:
-      return MA_NOACTIVATE;
-    default:
-      break;
-    }
-    return DefWindowProc(hwnd, message, wparam, lparam);
-  }
-
   HeadlessInAppWebViewManager::HeadlessInAppWebViewManager(const FlutterInappwebviewWindowsPlugin* plugin)
     : plugin(plugin),
     ChannelDelegate(plugin->registrar->messenger(), HeadlessInAppWebViewManager::METHOD_CHANNEL_NAME)
   {
     windowClass_.lpszClassName = HeadlessInAppWebView::CLASS_NAME;
-    windowClass_.lpfnWndProc = &TransparentWndProc;
+    windowClass_.lpfnWndProc = &DefWindowProc;
 
     RegisterClass(&windowClass_);
   }
@@ -93,14 +75,7 @@ namespace flutter_inappwebview_plugin
       nullptr,
       windowClass_.hInstance, nullptr);
 
-    // Ensure headless parent window does not intercept input or activation
-    if (hwnd != nullptr) {
-      LONG_PTR exstyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
-      SetWindowLongPtr(hwnd, GWL_EXSTYLE, exstyle | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
-      EnableWindow(hwnd, FALSE);
-      SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
-        SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-    }
+    // Headless window uses default proc; no special input styling needed
 
     auto webViewEnvironment = webViewEnvironmentId.has_value() && map_contains(plugin->webViewEnvironmentManager->webViewEnvironments, webViewEnvironmentId.value())
       ? plugin->webViewEnvironmentManager->webViewEnvironments.at(webViewEnvironmentId.value()).get() : nullptr;
@@ -127,14 +102,7 @@ namespace flutter_inappwebview_plugin
             std::move(webViewEnv), std::move(webViewController), nullptr
           );
 
-          // Make the WebView2 child windows (if any) pass-through as well
-          HWND parentHwnd = nullptr;
-          if (SUCCEEDED(inAppWebView->webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
-            for (HWND child = GetWindow(parentHwnd, GW_CHILD); child != nullptr; child = GetWindow(child, GW_HWNDNEXT)) {
-              LONG_PTR exChild = GetWindowLongPtr(child, GWL_EXSTYLE);
-              SetWindowLongPtr(child, GWL_EXSTYLE, exChild | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
-            }
-          }
+          // No pass-through changes for headless path
 
           HeadlessInAppWebViewCreationParams headlessParams = {
             id,
