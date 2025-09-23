@@ -2373,37 +2373,12 @@ namespace flutter_inappwebview_plugin
         } else {
           ClientToScreen(flutterWindowHWnd, &pt);
         }
+        // Keep WebView2 parent HWND completely out of the way to avoid blocking Flutter hits
         ::SetWindowPos(parentHwnd,
           nullptr,
-          static_cast<int>(pt.x),
-          static_cast<int>(pt.y),
-          static_cast<int>(scaled_width),
-          static_cast<int>(scaled_height),
+          -32000, -32000,
+          1, 1,
           SWP_NOZORDER | SWP_NOACTIVATE);
-
-        // Strongly constrain parent window's hit-testable area to the WebView bounds
-        // so it cannot block clicks outside (e.g., desktop/background).
-        HRGN parentRegion = CreateRectRgn(0, 0,
-          static_cast<int>(scaled_width), static_cast<int>(scaled_height));
-        if (parentRegion) {
-          SetWindowRgn(parentHwnd, parentRegion, TRUE);
-        }
-
-        // Also reposition and constrain the overlay host window to the same rect
-        if (overlayParent != nullptr) {
-          ::SetWindowPos(overlayParent,
-            nullptr,
-            static_cast<int>(ptFlutter.x),
-            static_cast<int>(ptFlutter.y),
-            static_cast<int>(scaled_width),
-            static_cast<int>(scaled_height),
-            SWP_NOZORDER | SWP_NOACTIVATE);
-          HRGN overlayRegion = CreateRectRgn(0, 0,
-            static_cast<int>(scaled_width), static_cast<int>(scaled_height));
-          if (overlayRegion) {
-            SetWindowRgn(overlayParent, overlayRegion, TRUE);
-          }
-        }
 
         // Make overlay and all descendants pass-through
         auto makeTransparent = [](HWND h) {
