@@ -27,7 +27,9 @@ namespace flutter_inappwebview_plugin
     case WM_NCHITTEST:
       return HTTRANSPARENT;
     case WM_MOUSEACTIVATE:
-      return MA_NOACTIVATEANDEAT;
+      // Do not eat the mouse message, allow it to propagate to the desktop
+      // so system gestures and clicks outside pass through correctly.
+      return MA_NOACTIVATE;
     default:
       break;
     }
@@ -145,6 +147,15 @@ namespace flutter_inappwebview_plugin
       plugin->registrar->GetView()->GetNativeWindow(),
       nullptr,
       windowClass_.hInstance, nullptr);
+
+    // Ensure overlay window does not intercept input or activation
+    if (hwnd != nullptr) {
+      LONG_PTR exstyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+      SetWindowLongPtr(hwnd, GWL_EXSTYLE, exstyle | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
+      // Make sure input is disabled; Flutter will forward necessary events to WebView2
+      EnableWindow(hwnd, FALSE);
+      SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    }
 
     if (keepAliveId.has_value() && map_contains(keepAliveWebViews, keepAliveId.value())) {
       auto webView = std::move(keepAliveWebViews.at(keepAliveId.value())->view);
