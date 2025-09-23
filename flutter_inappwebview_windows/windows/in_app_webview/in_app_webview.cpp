@@ -2380,6 +2380,14 @@ namespace flutter_inappwebview_plugin
           static_cast<int>(scaled_height),
           SWP_NOZORDER | SWP_NOACTIVATE);
 
+        // Strongly constrain parent window's hit-testable area to the WebView bounds
+        // so it cannot block clicks outside (e.g., desktop/background).
+        HRGN parentRegion = CreateRectRgn(0, 0,
+          static_cast<int>(scaled_width), static_cast<int>(scaled_height));
+        if (parentRegion) {
+          SetWindowRgn(parentHwnd, parentRegion, TRUE);
+        }
+
         // Make overlay and all descendants pass-through
         auto makeTransparent = [](HWND h) {
           LONG_PTR ex = GetWindowLongPtr(h, GWL_EXSTYLE);
@@ -2398,6 +2406,22 @@ namespace flutter_inappwebview_plugin
         if (parentHwnd != flutterWindowHWnd) {
           applyTree(parentHwnd);
         }
+
+        // Also hard-clip the subtree windows to their client rects to avoid stray hit-tests
+        std::function<void(HWND)> applyClip;
+        applyClip = [&](HWND h) {
+          if (!h) return;
+          RECT cr; GetClientRect(h, &cr);
+          int cw = cr.right - cr.left; int ch = cr.bottom - cr.top;
+          if (cw > 0 && ch > 0) {
+            HRGN r = CreateRectRgn(0, 0, cw, ch);
+            if (r) SetWindowRgn(h, r, TRUE);
+          }
+          for (HWND child = GetWindow(h, GW_CHILD); child != nullptr; child = GetWindow(child, GW_HWNDNEXT)) {
+            applyClip(child);
+          }
+        };
+        applyClip(parentHwnd);
       }
 
       if (surfaceSizeChangedCallback_) {
@@ -2459,6 +2483,8 @@ namespace flutter_inappwebview_plugin
         if (parentHwnd != flutterWindowHWnd) {
           LONG_PTR ex = GetWindowLongPtr(parentHwnd, GWL_EXSTYLE);
           SetWindowLongPtr(parentHwnd, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
+          // Prevent the parent overlay from receiving input at all (composition uses explicit Send*Input)
+          EnableWindow(parentHwnd, FALSE);
           ::SetWindowPos(parentHwnd, nullptr, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
         }
