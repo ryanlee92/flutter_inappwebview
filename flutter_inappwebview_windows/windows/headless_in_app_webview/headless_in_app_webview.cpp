@@ -1,3 +1,4 @@
+#include <Windows.h>
 #include <DispatcherQueue.h>
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
@@ -128,7 +129,7 @@ namespace flutter_inappwebview_plugin
 
           // Make the WebView2 child windows (if any) pass-through as well
           HWND parentHwnd = nullptr;
-          if (succeededOrLog(inAppWebView->webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
+          if (SUCCEEDED(inAppWebView->webViewController->get_ParentWindow(&parentHwnd)) && parentHwnd != nullptr) {
             for (HWND child = GetWindow(parentHwnd, GW_CHILD); child != nullptr; child = GetWindow(child, GW_HWNDNEXT)) {
               LONG_PTR exChild = GetWindowLongPtr(child, GWL_EXSTYLE);
               SetWindowLongPtr(child, GWL_EXSTYLE, exChild | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
