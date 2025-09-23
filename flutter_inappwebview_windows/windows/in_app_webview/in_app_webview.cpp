@@ -2380,26 +2380,23 @@ namespace flutter_inappwebview_plugin
           static_cast<int>(scaled_height),
           SWP_NOZORDER | SWP_NOACTIVATE);
 
-        // Make overlay pass-through
-        if (parentHwnd != flutterWindowHWnd) {
-          LONG_PTR ex = GetWindowLongPtr(parentHwnd, GWL_EXSTYLE);
-          SetWindowLongPtr(parentHwnd, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
-          ::SetWindowPos(parentHwnd, nullptr, 0, 0, 0, 0,
+        // Make overlay and all descendants pass-through
+        auto makeTransparent = [](HWND h) {
+          LONG_PTR ex = GetWindowLongPtr(h, GWL_EXSTYLE);
+          SetWindowLongPtr(h, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
+          ::SetWindowPos(h, nullptr, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-        }
-
-        // Ensure all child windows are also pass-through and region-clipped
-        for (HWND child = GetWindow(parentHwnd, GW_CHILD); child != nullptr; child = GetWindow(child, GW_HWNDNEXT)) {
-          LONG_PTR exChild = GetWindowLongPtr(child, GWL_EXSTYLE);
-          SetWindowLongPtr(child, GWL_EXSTYLE, exChild | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
-          RECT cr; GetClientRect(child, &cr);
-          int cw = cr.right - cr.left; int ch = cr.bottom - cr.top;
-          if (cw > 0 && ch > 0) {
-            HRGN crgn = CreateRectRgn(0, 0, cw, ch);
-            if (crgn) {
-              SetWindowRgn(child, crgn, TRUE);
-            }
+        };
+        std::function<void(HWND)> applyTree;
+        applyTree = [&](HWND h) {
+          if (!h) return;
+          makeTransparent(h);
+          for (HWND child = GetWindow(h, GW_CHILD); child != nullptr; child = GetWindow(child, GW_HWNDNEXT)) {
+            applyTree(child);
           }
+        };
+        if (parentHwnd != flutterWindowHWnd) {
+          applyTree(parentHwnd);
         }
       }
 
@@ -2576,8 +2573,6 @@ namespace flutter_inappwebview_plugin
 
     switch (kind) {
     case InAppWebViewPointerEventKind::Down:
-      // Move focus to WebView so it receives subsequent input
-      webViewController->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
       switch (button) {
       case InAppWebViewPointerButton::Primary:
         virtualKeys_.setIsLeftButtonDown(true);
