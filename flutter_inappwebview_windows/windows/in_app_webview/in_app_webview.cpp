@@ -2333,9 +2333,10 @@ namespace flutter_inappwebview_plugin
     }
 
     if (surface_ && width > 0 && height > 0) {
-      // Treat provided width/height as raw pixels to avoid double-scaling
-      auto scaled_width = static_cast<double>(width);
-      auto scaled_height = static_cast<double>(height);
+      // Update device scale factor from Flutter and convert logical -> device pixels
+      scaleFactor_ = scale_factor;
+      auto scaled_width = static_cast<double>(width) * static_cast<double>(scaleFactor_);
+      auto scaled_height = static_cast<double>(height) * static_cast<double>(scaleFactor_);
 
       // Keep current left/top offset
       RECT currentBounds{ 0, 0, 0, 0 };
@@ -2429,9 +2430,10 @@ namespace flutter_inappwebview_plugin
     }
 
     if (x >= 0 && y >= 0) {
-      // Treat provided x/y as raw pixels to avoid double-scaling
-      auto scaled_x = static_cast<int>(x);
-      auto scaled_y = static_cast<int>(y);
+      // Update device scale factor and convert logical -> device pixels
+      scaleFactor_ = scale_factor;
+      auto scaled_x = static_cast<int>(static_cast<double>(x) * static_cast<double>(scaleFactor_));
+      auto scaled_y = static_cast<int>(static_cast<double>(y) * static_cast<double>(scaleFactor_));
 
       RECT currentBounds{ 0, 0, 0, 0 };
       (void)webViewController->get_Bounds(&currentBounds);
