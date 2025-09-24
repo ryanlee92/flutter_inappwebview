@@ -237,6 +237,7 @@ class CustomPlatformViewController
       return;
     }
     assert(value.isInitialized);
+    print('setPosition: $position, $scaleFactor');
     return _methodChannel
         .invokeMethod('setPosition', [position.dx, position.dy, scaleFactor]);
   }
