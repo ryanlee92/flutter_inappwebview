@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -402,7 +403,8 @@ class _CustomPlatformViewState extends State<CustomPlatformView> with PlatformUt
       await _controller.ready;
       final dpr = View.maybeOf(context)?.devicePixelRatio ?? MediaQuery.maybeOf(context)?.devicePixelRatio ?? window.devicePixelRatio;
       print('setSize: ${box.size}, $dpr');
-      unawaited(_controller._setSize(box.size, widget.scaleFactor ?? dpr));
+      final clamped = Size(math.max(1.0, box.size.width), math.max(1.0, box.size.height));
+      unawaited(_controller._setSize(clamped, widget.scaleFactor ?? dpr));
     }
   }
 
