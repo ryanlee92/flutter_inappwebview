@@ -356,7 +356,7 @@ class _CustomPlatformViewState extends State<CustomPlatformView>
                         // Ignoring hover events on touch for now
                         return;
                       }
-                      _controller._setCursorPos(ev.localPosition);
+                      _controller._setCursorPos(ev.position);
                     },
                     onPointerDown: (ev) {
                       _reportSurfaceSize();
@@ -376,7 +376,7 @@ class _CustomPlatformViewState extends State<CustomPlatformView>
                         _controller._setPointerUpdate(
                             InAppWebViewPointerEventKind.down,
                             ev.pointer,
-                            ev.localPosition,
+                            ev.position,
                             ev.size,
                             ev.pressure);
                         return;
@@ -392,7 +392,7 @@ class _CustomPlatformViewState extends State<CustomPlatformView>
                         _controller._setPointerUpdate(
                             InAppWebViewPointerEventKind.up,
                             ev.pointer,
-                            ev.localPosition,
+                            ev.position,
                             ev.size,
                             ev.pressure);
                         return;
@@ -417,11 +417,11 @@ class _CustomPlatformViewState extends State<CustomPlatformView>
                         _controller._setPointerUpdate(
                             InAppWebViewPointerEventKind.update,
                             ev.pointer,
-                            ev.localPosition,
+                            ev.position,
                             ev.size,
                             ev.pressure);
                       } else {
-                        _controller._setCursorPos(ev.localPosition);
+                        _controller._setCursorPos(ev.position);
                       }
                     },
                     onPointerSignal: (signal) {
