@@ -27,9 +27,9 @@ namespace flutter_inappwebview_plugin
     case WM_NCHITTEST:
       return HTTRANSPARENT;
     case WM_MOUSEACTIVATE:
-      // Do not eat the mouse message, allow it to propagate to the desktop
-      // so system gestures and clicks outside pass through correctly.
-      return MA_NOACTIVATEANDEAT;
+      // Activate the parent (Flutter window) so keyboard works, but don't eat the click.
+      // Combined with HTTRANSPARENT hit-test, the mouse event will pass through.
+      return MA_ACTIVATE;
     default:
       break;
     }
