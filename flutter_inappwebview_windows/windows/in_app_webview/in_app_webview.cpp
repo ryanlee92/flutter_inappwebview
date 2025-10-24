@@ -2683,7 +2683,9 @@ namespace flutter_inappwebview_plugin
       keyKind = COREWEBVIEW2_KEY_EVENT_KIND_KEY_UP;
       break;
     case InAppWebViewKeyEventKind::Character:
-      keyKind = COREWEBVIEW2_KEY_EVENT_KIND_CHARACTER;
+      // Fallback: older WebView2 SDKs may not have CHARACTER kind.
+      // Treat as KEY_DOWN to avoid compile-time errors; character text will still be handled by page input.
+      keyKind = COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN;
       break;
     }
 
