@@ -153,7 +153,7 @@ namespace flutter_inappwebview_plugin
       LONG_PTR exstyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
       SetWindowLongPtr(hwnd, GWL_EXSTYLE, exstyle | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
       // Make sure input is disabled; Flutter will forward necessary events to WebView2
-      EnableWindow(hwnd, FALSE);
+      // EnableWindow(hwnd, FALSE);
       SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     }
 

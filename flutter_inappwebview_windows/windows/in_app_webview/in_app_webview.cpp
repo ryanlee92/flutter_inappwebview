@@ -2478,7 +2478,7 @@ namespace flutter_inappwebview_plugin
           LONG_PTR ex = GetWindowLongPtr(parentHwnd, GWL_EXSTYLE);
           SetWindowLongPtr(parentHwnd, GWL_EXSTYLE, ex | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
           // Prevent the parent overlay from receiving input at all (composition uses explicit Send*Input)
-          EnableWindow(parentHwnd, FALSE);
+          // EnableWindow(parentHwnd, FALSE);
           ::SetWindowPos(parentHwnd, nullptr, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
         }
