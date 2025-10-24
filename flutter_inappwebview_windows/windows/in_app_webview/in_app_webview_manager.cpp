@@ -154,7 +154,7 @@ namespace flutter_inappwebview_plugin
       // SetWindowLongPtr(hwnd, GWL_EXSTYLE, exstyle | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE);
       // Make sure input is disabled; Flutter will forward necessary events to WebView2
       // EnableWindow(hwnd, FALSE);
-      SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+      SetWindowPos(hwnd, nullptr, 0, 0, 1, 1, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     }
 
     if (keepAliveId.has_value() && map_contains(keepAliveWebViews, keepAliveId.value())) {
