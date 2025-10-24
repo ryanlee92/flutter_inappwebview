@@ -2662,6 +2662,41 @@ namespace flutter_inappwebview_plugin
         lastCursorPos_);
     }
   }
+  void InAppWebView::sendKeyEvent(InAppWebViewKeyEventKind kind,
+    uint32_t virtualKey,
+    int64_t scanCode,
+    bool isExtendedKey,
+    bool isMenuKeyDown,
+    bool wasKeyDown,
+    bool isKeyReleased)
+  {
+    if (!webViewCompositionController) {
+      return;
+    }
+
+    COREWEBVIEW2_KEY_EVENT_KIND keyKind = COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN;
+    switch (kind) {
+    case InAppWebViewKeyEventKind::KeyDown:
+      keyKind = COREWEBVIEW2_KEY_EVENT_KIND_KEY_DOWN;
+      break;
+    case InAppWebViewKeyEventKind::KeyUp:
+      keyKind = COREWEBVIEW2_KEY_EVENT_KIND_KEY_UP;
+      break;
+    case InAppWebViewKeyEventKind::Character:
+      keyKind = COREWEBVIEW2_KEY_EVENT_KIND_CHARACTER;
+      break;
+    }
+
+    COREWEBVIEW2_PHYSICAL_KEY_STATUS status{};
+    status.RepeatCount = 1;
+    status.ScanCode = static_cast<UINT>(scanCode);
+    status.IsExtendedKey = isExtendedKey;
+    status.IsMenuKeyDown = isMenuKeyDown;
+    status.WasKeyDown = wasKeyDown;
+    status.IsKeyReleased = isKeyReleased;
+
+    webViewCompositionController->SendKeyEvent(keyKind, virtualKey, status);
+  }
 
   void InAppWebView::setScrollDelta(double delta_x, double delta_y)
   {

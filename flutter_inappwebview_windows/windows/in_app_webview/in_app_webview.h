@@ -33,6 +33,7 @@ namespace flutter_inappwebview_plugin
   // custom_platform_view
   enum class InAppWebViewPointerButton { None, Primary, Secondary, Tertiary };
   enum class InAppWebViewPointerEventKind { Activate, Down, Enter, Leave, Up, Update, Cancel };
+  enum class InAppWebViewKeyEventKind { KeyDown = 0, KeyUp = 1, Character = 2 };
   typedef std::function<void(size_t width, size_t height)>
     SurfaceSizeChangedCallback;
   typedef std::function<void(const HCURSOR)> CursorChangedCallback;
@@ -130,6 +131,13 @@ namespace flutter_inappwebview_plugin
     void setPointerButtonState(InAppWebViewPointerEventKind kind, InAppWebViewPointerButton button);
     void sendScroll(double offset, bool horizontal);
     void setScrollDelta(double delta_x, double delta_y);
+    void sendKeyEvent(InAppWebViewKeyEventKind kind,
+      uint32_t virtualKey,
+      int64_t scanCode,
+      bool isExtendedKey,
+      bool isMenuKeyDown,
+      bool wasKeyDown,
+      bool isKeyReleased);
     void onSurfaceSizeChanged(SurfaceSizeChangedCallback callback)
     {
       surfaceSizeChangedCallback_ = std::move(callback);

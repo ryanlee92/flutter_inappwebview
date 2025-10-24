@@ -20,6 +20,7 @@ namespace flutter_inappwebview_plugin
   constexpr auto kMethodSetPointerUpdate = "setPointerUpdate";
   constexpr auto kMethodSetPointerButton = "setPointerButton";
   constexpr auto kMethodSetScrollDelta = "setScrollDelta";
+  constexpr auto kMethodSendKeyEvent = "sendKeyEvent";
   constexpr auto kMethodSetFpsLimit = "setFpsLimit";
 
   constexpr auto kEventType = "type";
@@ -274,6 +275,39 @@ namespace flutter_inappwebview_plugin
       if (delta && view) {
         view->setScrollDelta(delta->first, delta->second);
         return result->Success();
+      }
+      return result->Error(kErrorInvalidArgs);
+    }
+
+    // sendKeyEvent: {"kind": int, "virtualKey": int, "scanCode": int, "isExtendedKey": bool, "isMenuKeyDown": bool, "wasKeyDown": bool, "isKeyReleased": bool}
+    if (method_name.compare(kMethodSendKeyEvent) == 0) {
+      const auto& map = std::get<flutter::EncodableMap>(*method_call.arguments());
+      const auto kind = map.find(flutter::EncodableValue("kind"));
+      const auto vkey = map.find(flutter::EncodableValue("virtualKey"));
+      const auto scan = map.find(flutter::EncodableValue("scanCode"));
+      const auto isExt = map.find(flutter::EncodableValue("isExtendedKey"));
+      const auto isMenu = map.find(flutter::EncodableValue("isMenuKeyDown"));
+      const auto was = map.find(flutter::EncodableValue("wasKeyDown"));
+      const auto isRel = map.find(flutter::EncodableValue("isKeyReleased"));
+      if (kind != map.end() && vkey != map.end() && scan != map.end() &&
+          isExt != map.end() && isMenu != map.end() && was != map.end() && isRel != map.end() && view) {
+        const auto kindVal = std::get_if<int32_t>(&kind->second);
+        const auto vkeyVal = std::get_if<int32_t>(&vkey->second);
+        const auto scanVal = std::get_if<int64_t>(&scan->second);
+        const auto isExtVal = std::get_if<bool>(&isExt->second);
+        const auto isMenuVal = std::get_if<bool>(&isMenu->second);
+        const auto wasVal = std::get_if<bool>(&was->second);
+        const auto isRelVal = std::get_if<bool>(&isRel->second);
+        if (kindVal && vkeyVal && scanVal && isExtVal && isMenuVal && wasVal && isRelVal) {
+          view->sendKeyEvent(static_cast<InAppWebViewKeyEventKind>(*kindVal),
+            static_cast<uint32_t>(*vkeyVal),
+            *scanVal,
+            *isExtVal,
+            *isMenuVal,
+            *wasVal,
+            *isRelVal);
+          return result->Success();
+        }
       }
       return result->Error(kErrorInvalidArgs);
     }
