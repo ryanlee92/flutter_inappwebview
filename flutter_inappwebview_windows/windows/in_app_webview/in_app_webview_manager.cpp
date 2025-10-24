@@ -29,7 +29,7 @@ namespace flutter_inappwebview_plugin
     case WM_MOUSEACTIVATE:
       // Do not eat the mouse message, allow it to propagate to the desktop
       // so system gestures and clicks outside pass through correctly.
-      return MA_NOACTIVATE;
+      return MA_NOACTIVATEANDEAT;
     default:
       break;
     }
