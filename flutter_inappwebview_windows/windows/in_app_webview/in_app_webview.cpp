@@ -2703,7 +2703,12 @@ namespace flutter_inappwebview_plugin
     auto webview_visual2 =
       webview_visual.try_as<ABI::Windows::UI::Composition::IVisual2>();
     if (webview_visual2) {
-      webview_visual2->put_RelativeSizeAdjustment({ 1.0f, 1.0f });
+      webview_visual2->put_RelativeSizeAdjustment({ 0.0f, 0.0f });
+    }
+
+    auto webview_visual1 = webview_visual.try_as<ABI::Windows::UI::Composition::IVisual>();
+    if (webview_visual1) {
+      webview_visual1->put_RelativeSizeAdjustment({ 1.0f, 1.0f });
     }
 
     winrt::com_ptr<ABI::Windows::UI::Composition::IVisualCollection> children;
@@ -2711,8 +2716,9 @@ namespace flutter_inappwebview_plugin
     children->InsertAtTop(webview_visual.get());
     webViewCompositionController->put_RootVisualTarget(webview_visual2.get());
 
+    RECT r{ 0, 0, 0, 0 };
+    webViewController->put_Bounds(r);
     webViewController->put_IsVisible(true);
-
     return true;
   }
 
