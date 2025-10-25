@@ -2692,7 +2692,7 @@ namespace flutter_inappwebview_plugin
     assert(surface_);
 
     // initial size. doesn't matter as we resize the surface anyway.
-    surface_->put_Size({ 1280, 720 });
+    surface_->put_Size({ 1, 1 });
     surface_->put_IsVisible(true);
 
     winrt::com_ptr<ABI::Windows::UI::Composition::IVisual> webview_visual;
@@ -2708,7 +2708,7 @@ namespace flutter_inappwebview_plugin
 
     auto webview_visual1 = webview_visual.try_as<ABI::Windows::UI::Composition::IVisual>();
     if (webview_visual1) {
-      webview_visual1->put_RelativeSizeAdjustment({ 1.0f, 1.0f });
+      webview_visual1->put_Size({ 1.0f, 1.0f });
     }
 
     winrt::com_ptr<ABI::Windows::UI::Composition::IVisualCollection> children;
@@ -2716,7 +2716,7 @@ namespace flutter_inappwebview_plugin
     children->InsertAtTop(webview_visual.get());
     webViewCompositionController->put_RootVisualTarget(webview_visual2.get());
 
-    RECT r{ 0, 0, 0, 0 };
+    RECT r{ 0, 0, 1, 1 };
     webViewController->put_Bounds(r);
     webViewController->put_IsVisible(true);
     return true;
